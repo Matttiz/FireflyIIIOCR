@@ -14,9 +14,15 @@ class TransactionParser:
         self.default_destination_id = default_destination_id
 
         self.amount_patterns = [
+            # Wymagamy znaku + lub - (lub myślnika —)
             re.compile(r'([+-]\s*\d+[.,]\d{2}\s*(?:PLN)?)'),
             re.compile(r'([—-]\s*\d+[.,]\d{2}\s*(?:PLN)?)'),
-            re.compile(r'(\d+[.,]\d{2}\s*PLN)'),
+        ]
+        # Wzorce do wykrywania linii z saldem (do odfiltrowania)
+        self.balance_patterns = [
+            re.compile(r'Transfer\s+wewnętrzny', re.IGNORECASE),
+            re.compile(r'Saldo', re.IGNORECASE),
+            re.compile(r'Dostępne', re.IGNORECASE),
         ]
         self.date_pattern = re.compile(r'(\d{2}[./-]\d{2}[./-]\d{2,4})')
         self.ignore_words = {'dzisiaj', 'wczoraj', 'jutro', 'dzień', 'dn', 'data', 'time', 'godz', 'godzina', 'dziś', 'wczoraj'}
@@ -50,6 +56,11 @@ class TransactionParser:
             if not line:
                 continue
 
+            # Skip balance lines (saldo po transakcji)
+            if self._is_balance_line(line):
+                logger.debug(f"Pomijam linię salda: {line}")
+                continue
+
             logger.debug(f"Parsuję wiersz {line_idx}: {line}")
 
             line_clean = self._clean_line(line)
@@ -80,12 +91,18 @@ class TransactionParser:
 
             account_name, description = self._extract_account_and_description(content_part)
 
-            # Find source_id from matched account name
+            # Find source_id/destination_id from matched account name
+            # For withdrawal: account is source
+            # For deposit: account is destination
             source_id = None
+            destination_id = self.default_destination_id
             if account_name:
                 for acc in self.accounts:
                     if acc.get('name') == account_name:
-                        source_id = acc.get('id')
+                        if sign == '+':  # deposit -> destination
+                            destination_id = acc.get('id')
+                        else:  # withdrawal -> source
+                            source_id = acc.get('id')
                         break
 
             # Determine transaction type based on sign
@@ -103,7 +120,7 @@ class TransactionParser:
                 'description': description or account_name or '',
                 'account_name': account_name,
                 'source_id': source_id,
-                'destination_id': self.default_destination_id,
+                'destination_id': destination_id,
                 'transaction_type': trans_type,
                 'raw_line': line,
                 'sign': sign,
@@ -118,10 +135,11 @@ class TransactionParser:
         """Łączy wiersze należące do tej samej transakcji.
         W trybie PSM 12 (pojedyncza linia) każda linia OCR to osobny wiersz,
         ale transakcje zaczynają się od prefiksu dnia + data (np. 'Dziś 15.01.2024').
+
+        Dodatkowo: dzieli linie które zawierają WIELE transakcji (wiele prefiksów dat w jednej linii).
         """
         merged_lines = []
         current_transaction_text = ""
-        transaction_type = "withdrawal"
 
         for line in lines:
             line = line.strip()
@@ -129,37 +147,67 @@ class TransactionParser:
                 continue
 
             if re.search(r'^\s*l\s*$', line, re.IGNORECASE):
-                transaction_type = "transfer"
+                # Marker transferu - pomiń
                 continue
 
-            has_new_date = self._is_new_transaction_start(line)
-            has_amount = any(pattern.search(line) for pattern in self.amount_patterns)
+            # Sprawdź czy linia zawiera wiele transakcji (wiele prefiksów dat)
+            # Szukamy wszystkich wystąpień prefiksu daty w linii
+            parts = self._split_by_date_prefixes(line)
 
-            if has_new_date and current_transaction_text:
-                merged_lines.append(current_transaction_text)
-                current_transaction_text = line
-                transaction_type = "withdrawal"
-            elif has_new_date and not current_transaction_text:
-                current_transaction_text = line
-                transaction_type = "withdrawal"
-            elif has_amount:
-                if current_transaction_text:
-                    current_transaction_text += " " + line
+            for part in parts:
+                part = part.strip()
+                if not part:
+                    continue
+
+                has_new_date = self._is_new_transaction_start(part)
+                has_amount = any(pattern.search(part) for pattern in self.amount_patterns)
+
+                # Jeśli część zaczyna się od daty/prefiksu - to nowa transakcja
+                if has_new_date:
+                    if current_transaction_text:
+                        merged_lines.append(current_transaction_text)
+                    current_transaction_text = part
+                # Jeśli część ma kwotę ale nie ma nowej daty - dołacz do obecnej transakcji
+                elif has_amount:
+                    if current_transaction_text:
+                        current_transaction_text += " " + part
+                    else:
+                        current_transaction_text = part
+                    # Kwota kończy transakcję
+                    merged_lines.append(current_transaction_text)
+                    current_transaction_text = ""
+                # Część bez daty i bez kwoty - dołacz do obecnej (np. kontynuacja opisu)
                 else:
-                    current_transaction_text = line
-                merged_lines.append(current_transaction_text)
-                current_transaction_text = ""
-                transaction_type = "withdrawal"
-            else:
-                if current_transaction_text:
-                    current_transaction_text += " " + line
-                else:
-                    current_transaction_text = line
+                    if current_transaction_text:
+                        current_transaction_text += " " + part
+                    else:
+                        # Część bez daty i bez kwoty na początku - pomiń (to śmieci OCR)
+                        pass
 
         if current_transaction_text:
             merged_lines.append(current_transaction_text)
 
         return merged_lines
+
+    def _split_by_date_prefixes(self, line: str) -> List[str]:
+        """Dzieli linię na części po prefiksach daty (Dziś, Wczoraj, Pn., Wt., itd.).
+        Zwraca listę fragmentów, każdy zaczynający się od prefiksu daty lub całą linię jeśli brak prefiksów.
+        """
+        # Wzorzec szukający prefiksów daty W ŚRODKU linii (nie tylko na początku)
+        # Używamy lookahead żeby nie zjeść prefiksu
+        prefix_pattern = r'(?=(?:Dziś|Wczoraj|Pn\.|Wt\.|Śr\.|Cz\.|Pt\.|Sb\.|Nd\.|Pon\.|Wto\.|Śro\.|Czw\.|Pią\.|Sob\.|Nie\.)\s+\d{2}[./-]\d{2}[./-]\d{2,4})'
+
+        parts = re.split(prefix_pattern, line, flags=re.IGNORECASE)
+        # Filtruj puste części
+        parts = [p.strip() for p in parts if p.strip()]
+        return parts
+
+    def _is_balance_line(self, line: str) -> bool:
+        """Sprawdza czy linia to linia z saldem (np. 'Transfer wewnętrzny 883,51 PLN') - do pominięcia."""
+        for pattern in self.balance_patterns:
+            if pattern.search(line):
+                return True
+        return False
 
     def _is_new_transaction_start(self, text: str) -> bool:
         """Sprawdza czy tekst zaczyna się od nowej transakcji.
@@ -271,7 +319,9 @@ class TransactionParser:
 
             # Only look for transfer pairs if this is a withdrawal
             if tx.get('transaction_type') != 'withdrawal':
-                transactions.append(Transaction(**tx))
+                # Remove 'sign' key before creating Transaction
+                tx_clean = {k: v for k, v in tx.items() if k != 'sign'}
+                transactions.append(Transaction(**tx_clean))
                 continue
 
             # Look for matching deposit
@@ -296,7 +346,7 @@ class TransactionParser:
                             description=f"Przelew: {tx['description']} -> {other_tx['description']}",
                             account_name=tx['account_name'],
                             source_id=tx['source_id'],
-                            destination_id=other_tx['source_id'] or self.default_destination_id,
+                            destination_id=other_tx['destination_id'] or self.default_destination_id,
                             transaction_type="transfer",
                             raw_line=f"{tx['raw_line']} | {other_tx['raw_line']}",
                         )
