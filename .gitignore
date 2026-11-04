@@ -1,0 +1,29 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+/tmp/firefly_ocr.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (large JSON files)
+*.json
+!categories.json
+!transactions_last_year.json
