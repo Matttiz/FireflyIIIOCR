@@ -121,4 +121,4 @@ ruff check src/
 
 ## 📝 Licencja
 
-Projekt prywatny – do użytku osobistego.
+Projekt prywatny – do użytku osobistego.# FireflyIIIOCR
