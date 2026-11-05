@@ -1,6 +1,11 @@
+"""
+Parser transakcji z OCR zrzutów ekranu banku.
+Obsługuje zarówno tryb PSM 12 (pojedyncze linie, każda transakcja w oddzielnym wierszu),
+ jak tryb blokowy (3-liniowe bloki: data/opis/kwota/konto, saldo, opis dodatkowy).
+"""
 import re
 from datetime import datetime, date
-from typing import List
+from typing import List, Dict, Optional
 import logging
 
 from src.model.transaction import Transaction
@@ -9,14 +14,16 @@ logger = logging.getLogger(__name__)
 
 
 class TransactionParser:
+    """Parser transakcji z OCR zrzutów ekranu banku."""
+
     def __init__(self, accounts: list, default_destination_id: int):
         self.accounts = accounts
         self.default_destination_id = default_destination_id
 
+        # Wzorce dla kwot ze znakiem (np. -0,50 PLN, +2,00 PLN)
         self.amount_patterns = [
-            # Wymagamy znaku + lub - (lub myślnika —)
-            re.compile(r'([+-]\s*\d+[.,]\d{2}\s*(?:PLN)?)'),
-            re.compile(r'([—-]\s*\d+[.,]\d{2}\s*(?:PLN)?)'),
+            re.compile(r'([+-—–]\s*\d+[.,]\d{2})(?:\s*PLN|$|\\s)'),
+            re.compile(r'([—–]\s*\d+[.,]\d{2})(?:\s*PLN|$|\\s)'),
         ]
         # Wzorce do wykrywania linii z saldem (do odfiltrowania)
         self.balance_patterns = [
@@ -26,8 +33,6 @@ class TransactionParser:
         ]
         self.date_pattern = re.compile(r'(\d{2}[./-]\d{2}[./-]\d{2,4})')
         self.ignore_words = {'dzisiaj', 'wczoraj', 'jutro', 'dzień', 'dn', 'data', 'time', 'godz', 'godzina', 'dziś', 'wczoraj'}
-        self.date_at_start_pattern = re.compile(r'^\d{2}[./-]\d{2}[./-]\d{2,4}')
-        self.wczoraj_dzis_pattern = re.compile(r'^(?:Wczoraj|Dziś)\s+\d{2}[./-]\d{2}[./-]\d{2,4}', re.IGNORECASE)
 
         # Prefiksy dni tygodnia / daty - używane do rozdzielenia transakcji w trybie PSM 12
         self.day_prefixes = ['Dziś', 'Wczoraj', 'Pn.', 'Wt.', 'Śr.', 'Cz.', 'Pt.', 'Sb.', 'Nd.',
@@ -43,11 +48,44 @@ class TransactionParser:
             re.IGNORECASE
         )
 
-    def parse_lines(self, lines: List[str]) -> List[Transaction]:
-        """Parsuje linie OCR na listę transakcji"""
-        logger.info(f"Rozpoczynam parsowanie {len(lines)} wierszy")
+        # Nowy parser blokowy dla transakcji z kolumnowym układem (3 wiersze)
+        self.block_parser = None
 
-        merged_lines = self._merge_transaction_lines(lines)
+    def parse_lines(self, lines: List[str], use_block_mode: bool = True) -> List[Transaction]:
+        """Parsuje linie OCR na listę transakcji
+
+        Args:
+            lines: Lista linii OCR
+            use_block_mode: Czy użyć trybu blokowego (dla transakcji z kolumnowym układem)
+                          Jeśli False - używamy starego trybu PSM 12
+        """
+        logger.info(f"Rozpoczynam parsowanie {len(lines)} wierszy (block_mode={use_block_mode})")
+
+        if use_block_mode:
+            return self._parse_blocks(lines)
+        else:
+            return self._parse_psm12(lines)
+
+    def _parse_blocks(self, lines: List[str]) -> List[Transaction]:
+        """Parsuje linie w trybie blokowym - transakcje w blokach 1-3 linii"""
+        # Przygotuj parser blokowy jeśli jeszcze nie zainicjalizowany
+        if self.block_parser is None:
+            from src.ocr.block_parser import BlockTransactionParser
+            self.block_parser = BlockTransactionParser(self.accounts, self.default_destination_id)
+
+        # Grupuj linie w bloki i parsuj
+        transactions = self.block_parser.parse_blocks(lines)
+        logger.info(f"Zparsowano {len(transactions)} transakcji w trybie blokowym")
+
+        return transactions
+
+    def _parse_psm12(self, lines: List[str]) -> List[Transaction]:
+        """Stary tryb PSM 12 - pojedyncza linia na transakcję"""
+        logger.info("Używanie trybu PSM 12 (pojedyncza linia)")
+
+        # Zmień wzorce na oryginalne - muszą mieć znak + lub - na początku
+        # oryginalne wzorce wymagają znaku na początku, więc sprawdźmy
+        merged_lines = self._merge_transaction_lines_psm12(lines)
 
         # First pass: parse all lines into raw transactions
         raw_transactions = []
@@ -131,13 +169,8 @@ class TransactionParser:
 
         return transactions
 
-    def _merge_transaction_lines(self, lines: List[str]) -> List[str]:
-        """Łączy wiersze należące do tej samej transakcji.
-        W trybie PSM 12 (pojedyncza linia) każda linia OCR to osobny wiersz,
-        ale transakcje zaczynają się od prefiksu dnia + data (np. 'Dziś 15.01.2024').
-
-        Dodatkowo: dzieli linie które zawierają WIELE transakcji (wiele prefiksów dat w jednej linii).
-        """
+    def _merge_transaction_lines_psm12(self, lines: List[str]) -> List[str]:
+        """Łączy wiersze należące do tej samej transakcji w trybie PSM 12."""
         merged_lines = []
         current_transaction_text = ""
 
@@ -151,7 +184,6 @@ class TransactionParser:
                 continue
 
             # Sprawdź czy linia zawiera wiele transakcji (wiele prefiksów dat)
-            # Szukamy wszystkich wystąpień prefiksu daty w linii
             parts = self._split_by_date_prefixes(line)
 
             for part in parts:
@@ -190,11 +222,7 @@ class TransactionParser:
         return merged_lines
 
     def _split_by_date_prefixes(self, line: str) -> List[str]:
-        """Dzieli linię na części po prefiksach daty (Dziś, Wczoraj, Pn., Wt., itd.).
-        Zwraca listę fragmentów, każdy zaczynający się od prefiksu daty lub całą linię jeśli brak prefiksów.
-        """
-        # Wzorzec szukający prefiksów daty W ŚRODKU linii (nie tylko na początku)
-        # Używamy lookahead żeby nie zjeść prefiksu
+        """Dzieli linię na części po prefiksach daty (Dziś, Wczoraj, Pn., Wt., itd.)."""
         prefix_pattern = r'(?=(?:Dziś|Wczoraj|Pn\.|Wt\.|Śr\.|Cz\.|Pt\.|Sb\.|Nd\.|Pon\.|Wto\.|Śro\.|Czw\.|Pią\.|Sob\.|Nie\.)\s+\d{2}[./-]\d{2}[./-]\d{2,4})'
 
         parts = re.split(prefix_pattern, line, flags=re.IGNORECASE)
@@ -210,12 +238,7 @@ class TransactionParser:
         return False
 
     def _is_new_transaction_start(self, text: str) -> bool:
-        """Sprawdza czy tekst zaczyna się od nowej transakcji.
-        Rozpoznaje:
-        1. Datę na początku linii (np. '15.01.2024')
-        2. 'Dziś'/'Wczoraj' + datę (np. 'Dziś 15.01.2024')
-        3. Prefiks dnia tygodnia + datę (np. 'Pn. 15.01.2024')
-        """
+        """Sprawdza czy tekst zaczyna się od nowej transakcji."""
         text = text.strip()
         return bool(
             self.date_at_start_pattern.search(text) or
@@ -231,7 +254,6 @@ class TransactionParser:
             line_clean = pattern.sub('', line_clean)
         # Also remove day prefixes like "Pn.", "Wt.", etc.
         for prefix in self.day_prefixes:
-            # Use word boundary at start and non-word/end at end
             escaped = re.escape(prefix)
             pattern = re.compile(r'(?<!\w)' + escaped + r'(?!\w)', re.IGNORECASE)
             line_clean = pattern.sub('', line_clean)
@@ -244,7 +266,6 @@ class TransactionParser:
             match = pattern.search(line)
             if match:
                 raw_amount = match.group(1).replace(' ', '').replace(',', '.').replace('PLN', '')
-                # Determine sign
                 sign = ''
                 if raw_amount.startswith('+'):
                     sign = '+'
@@ -267,8 +288,7 @@ class TransactionParser:
         return None
 
     def _extract_account_and_description(self, content: str):
-        """Extract account name from content if it matches a known account.
-        Uses word-based matching for better partial name detection."""
+        """Extract account name from content if it matches a known account."""
         content_lower = content.lower()
         content_words = set(content_lower.split())
 
@@ -281,12 +301,10 @@ class TransactionParser:
             acc_lower = acc['name'].lower()
             acc_words = set(acc_lower.split())
 
-            # Calculate word overlap
             common = content_words & acc_words
             significant_common = [w for w in common if len(w) > 2]
             if significant_common:
                 score = len(significant_common)
-                # Bonus for exact substring match
                 if acc_lower in content_lower:
                     score += 10
                 if score > best_score:
@@ -294,7 +312,6 @@ class TransactionParser:
                     best_match = acc
 
         if best_match:
-            # Remove matched account words from description
             acc_lower = best_match['name'].lower()
             temp_desc = content
             for part in best_match['name'].split():
@@ -306,8 +323,7 @@ class TransactionParser:
         return '', content.strip()
 
     def _detect_transfers(self, raw_transactions: List[dict]) -> List[Transaction]:
-        """Detect transfer pairs: withdrawal + deposit with same amount on same/adjacent day.
-        Returns list of Transaction objects with transfers merged."""
+        """Detect transfer pairs: withdrawal + deposit with same amount on same/adjacent day."""
         from datetime import timedelta
 
         transactions = []
@@ -317,14 +333,11 @@ class TransactionParser:
             if i in used_indices:
                 continue
 
-            # Only look for transfer pairs if this is a withdrawal
             if tx.get('transaction_type') != 'withdrawal':
-                # Remove 'sign' key before creating Transaction
                 tx_clean = {k: v for k, v in tx.items() if k != 'sign'}
                 transactions.append(Transaction(**tx_clean))
                 continue
 
-            # Look for matching deposit
             found_transfer = False
             for j, other_tx in enumerate(raw_transactions):
                 if j <= i or j in used_indices:
@@ -332,14 +345,9 @@ class TransactionParser:
                 if other_tx.get('transaction_type') != 'deposit':
                     continue
 
-                # Check same amount (within 0.01)
                 if abs(tx['amount'] - other_tx['amount']) < 0.01:
-                    # Check same or adjacent day
                     date_diff = abs((tx['date'] - other_tx['date']).days)
                     if date_diff <= 1:
-                        # Found a transfer pair!
-                        # Determine source/destination accounts
-                        # withdrawal account -> source, deposit account -> destination
                         transfer = Transaction(
                             date=tx['date'],
                             amount=tx['amount'],
@@ -357,7 +365,6 @@ class TransactionParser:
                         break
 
             if not found_transfer:
-                # Remove 'sign' key before creating Transaction
                 tx_clean = {k: v for k, v in tx.items() if k != 'sign'}
                 transactions.append(Transaction(**tx_clean))
 
