@@ -168,7 +168,7 @@ class TransactionTableView(QWidget):
 
 
 class OcrSettingsWidget(QWidget):
-    """Widget wyboru trybu OCR"""
+    """Widget wyboru trybu OCR - zablokowany: tylko PSM 12"""
 
     def __init__(self):
         super().__init__()
@@ -176,25 +176,17 @@ class OcrSettingsWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.psm_combo = QComboBox()
-        self.psm_combo.addItems([
-            "PSM 12 - Pojedyncza linia",
-            "PSM 3 - Automatyczne",
-            "PSM 4 - Pojedyncza kolumna",
-            "PSM 6 - Jednolity blok (tabele)",
-            "PSM 11 - Rzadki tekst",
-        ])
+        self.psm_combo.addItem("PSM 12 - Pojedyncza linia")
         self.psm_combo.setCurrentText("PSM 12 - Pojedyncza linia")
-        self.psm_combo.setToolTip("Tryb segmentacji strony Tesseract")
+        self.psm_combo.setEnabled(False)  # Zablokowany - tylko PSM 12
+        self.psm_combo.setToolTip("Domyślny tryb Tesseract (tylko PSM 12)")
 
         layout.addWidget(QLabel("Tryb OCR:"))
         layout.addWidget(self.psm_combo)
         self.setLayout(layout)
 
     def get_psm(self) -> int:
-        import re
-        text = self.psm_combo.currentText()
-        match = re.search(r'PSM\s+(\d+)', text)
-        return int(match.group(1)) if match else 6
+        return 12  # Always return 12 since mode is fixed
 
 
 class MainWindow(QMainWindow):

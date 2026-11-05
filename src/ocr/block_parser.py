@@ -184,9 +184,11 @@ class BlockTransactionParser:
         return result
 
     def _group_into_blocks(self, lines: List[str]) -> List[List[str]]:
-        """Grupuje linie w bloki - nowa transakcja gdy linia zaczyna się od daty/dnia"""
+        """Grupuje linie w bloki - nowa transakcja gdy linia zaczyna się od daty/dnia.
+        Linie przed pierwszą transakcją (np. adres sklepu, konto) są dołączane do pierwszego bloku."""
         blocks = []
         current_block = []
+        pre_header_lines = []  # Linie przed pierwszą transakcją (adres, konto)
 
         for line in lines:
             line = line.strip()
@@ -198,10 +200,15 @@ class BlockTransactionParser:
             if is_new_transaction:
                 if current_block:
                     blocks.append(current_block)
-                current_block = [line]
+                # Nowy blok: najpierw pre-header lines, potem linia transakcji
+                current_block = pre_header_lines + [line]
+                pre_header_lines = []  # Wyczyszczone po użyciu
             else:
                 if current_block:
                     current_block.append(line)
+                else:
+                    # Linia przed pierwszą transakcją - zapisz jako pre-header
+                    pre_header_lines.append(line)
 
         if current_block:
             blocks.append(current_block)
@@ -215,11 +222,23 @@ class BlockTransactionParser:
         return has_day_date and has_amount
 
     def _parse_single_block(self, block_lines: List[str], block_idx: int) -> Optional[Transaction]:
-        """Parsuje pojedynczy blok 1-3 linii na transakcję"""
+        """Parsuje pojedynczy blok na transakcję.
+        Szuka linii z datą i kwotą (może nie być pierwsza, jeśli są pre-header lines)."""
         if not block_lines:
             return None
 
-        first_line = block_lines[0]
+        # Znajdź linię z datą i kwotą (główna linia transakcji)
+        main_line_idx = -1
+        for idx, line in enumerate(block_lines):
+            if self._is_transaction_start(line):
+                main_line_idx = idx
+                break
+
+        if main_line_idx == -1:
+            # Nie znaleziono linii z datą i kwotą
+            return None
+
+        first_line = block_lines[main_line_idx]
 
         # Wyciągnij datę
         trans_date = self._extract_date(first_line)
@@ -245,18 +264,23 @@ class BlockTransactionParser:
         except ValueError:
             return None
 
-        # Opis z pierwszej linii (przed kwotą)
+        # Opis z głównej linii (przed kwotą)
         desc_part1 = first_line[:amount_match.start()].strip()
         desc_part1 = self._clean_start_of_desc(desc_part1)
 
-        # Wyciągnij konto z pierwszej linii (po kwocie)
+        # Wyciągnij konto z głównej linii (po kwocie)
         account_part = first_line[amount_match.end():].strip()
 
-        # Podział linii 2 i 3
+        # Pre-header lines (przed główną linią) - dołącz do opisu
+        pre_header_desc = ""
+        for i in range(main_line_idx):
+            pre_header_desc += " " + block_lines[i]
+
+        # Podział linii po głównej (2 i 3)
         desc_part2 = ""
         category_name = ""
 
-        for extra_line in block_lines[1:]:
+        for extra_line in block_lines[main_line_idx + 1:]:
             if self.transfer_pattern.search(extra_line):
                 category_name = "Transfer"
             elif not self.amount_pattern.search(extra_line):
@@ -265,8 +289,8 @@ class BlockTransactionParser:
                 else:
                     desc_part2 += " " + extra_line
 
-        # Złóż pełny opis
-        full_desc = f"{desc_part1} {desc_part2}".strip()
+        # Złóż pełny opis (pre-header + main desc + extra lines)
+        full_desc = f"{pre_header_desc} {desc_part1} {desc_part2}".strip()
         full_desc = re.sub(r'\s+', ' ', full_desc)
 
         # Określ kategorię
@@ -292,9 +316,19 @@ class BlockTransactionParser:
                 if not acc_name:
                     continue
 
-                # Dokładne dopasowanie
-                if acc_name in text_lower:
-                    score = len(acc_name) + 100
+                # Dokładne dopasowanie z granicami słów
+                import re
+                pattern = r'\b' + re.escape(acc_name) + r'\b'
+                match = re.search(pattern, text_lower)
+
+                if match:
+                    # Score: bonus za dokładne dopasowanie całego stringa,
+                    # ale nie tylko dłuższy - preferuj precyzję
+                    # "KONTO Direct" (12) vs "E KONTO Direct" (13) - oba matchują
+                    # Dodaj bonus za to że nazwa zaczyna się od znacznego słowa (nie "e", "a", "the" itp.)
+                    first_word = acc_name.split()[0] if acc_name.split() else ""
+                    bonus = 10 if len(first_word) > 2 else 0
+                    score = len(match.group()) + bonus + 100
                 else:
                     # Częściowe dopasowanie po słowach
                     acc_words = set(acc_name.split())
