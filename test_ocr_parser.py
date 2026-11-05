@@ -13,14 +13,14 @@ from src.model.transaction import Transaction
 
 
 def load_accounts() -> list:
-    """Load default test accounts. Override with your Firefly III accounts."""
+    """Load default test accounts matching BlockTransactionParser's account_keywords."""
     return [
         {'id': 1, 'name': 'E KONTO Direct'},
-        {'id': 2, 'name': 'E Smart Saver'},
+        {'id': 2, 'name': 'ING Bank Śląski  Komfort (Wspólne)'},  # matches 'ing', 'komfort', '4246', 'visa'
         {'id': 3, 'name': 'Millennium'},
         {'id': 4, 'name': 'KONTO Direct'},
-        {'id': 5, 'name': 'Karta wirtualna ING VISA'},
-        {'id': 6, 'name': 'KONTO Komfort'},
+        {'id': 5, 'name': 'E Smart Saver'},
+        {'id': 6, 'name': 'E KONTO Komfort'},
         {'id': 7, 'name': 'Cash account'},
     ]
 
