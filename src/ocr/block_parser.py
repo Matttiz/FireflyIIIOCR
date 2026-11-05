@@ -27,13 +27,13 @@ class BlockTransactionParser:
         'smart': {'category_id': 54, 'name': 'SmartSaver', 'type': 'deposit'},
 
         # Hazard / STS
-        'sts.pl': {'category_id': 7, 'name': 'Hazard', 'type': 'withdrawal'},
-        'sts': {'category_id': 7, 'name': 'Hazard', 'type': 'withdrawal'},
-        'www.sts.pl': {'category_id': 7, 'name': 'Hazard', 'type': 'withdrawal'},
+        'sts.pl': {'category_id': 7, 'name': 'Hazard', 'type': 'withdrawal', 'description': 'STS'},
+        'sts': {'category_id': 7, 'name': 'Hazard', 'type': 'withdrawal', 'description': 'STS'},
+        'www.sts.pl': {'category_id': 7, 'name': 'Hazard', 'type': 'withdrawal', 'description': 'STS'},
 
         # Transfer wewnętrzny
-        'transfer wewnętrzny': {'category_id': 2, 'name': 'Transfer', 'type': 'transfer'},
-        'przelew własny': {'category_id': 2, 'name': 'Transfer', 'type': 'transfer'},
+        'transfer wewnętrzny': {'category_id': 2, 'name': 'Transfer', 'type': 'transfer', 'description': 'Transfer'},
+        'przelew własny': {'category_id': 2, 'name': 'Transfer', 'type': 'transfer', 'description': 'Transfer'},
 
         # Sprzedawcy - Szpargały
         'helion.pl': {'category_id': 11, 'name': 'Szpargały', 'type': 'withdrawal'},
@@ -49,8 +49,11 @@ class BlockTransactionParser:
         'google youtube': {'category_id': 12, 'name': 'Subskrypcje', 'type': 'withdrawal'},
         'disney': {'category_id': 12, 'name': 'Subskrypcje', 'type': 'withdrawal'},
 
-        # Opłaty
+        # Opłaty bankowe
         'opłaty bankowe': {'category_id': 50, 'name': 'Opłaty Bankowe', 'type': 'withdrawal'},
+        'opłata mies. karta': {'category_id': 50, 'name': 'Opłaty Bankowe', 'type': 'withdrawal'},
+        'opłata za prowadzenie rachunku': {'category_id': 50, 'name': 'Opłaty Bankowe', 'type': 'withdrawal'},
+        'opłata za kartę': {'category_id': 50, 'name': 'Opłaty Bankowe', 'type': 'withdrawal'},
 
         # Inne
         '800 plus': {'category_id': 9, 'name': '800 plus', 'type': 'deposit'},
@@ -369,12 +372,15 @@ class BlockTransactionParser:
             trans_type = 'withdrawal'
         # Kategoria transfer zostanie ustawiona później w _merge_internal_transfers
 
+        # Użyj opisu z kategorii jeśli dostępny, inaczej pełny opis
+        final_description = category.get('description', full_desc) if category else full_desc
+
         raw_line = ' | '.join(block_lines)
 
         return Transaction(
             date=trans_date,
             amount=amount_val,
-            description=full_desc,
+            description=final_description,
             account_name=matched_account_name or account_part,
             source_id=source_id,
             destination_id=destination_id,
@@ -400,13 +406,18 @@ class BlockTransactionParser:
         return desc
 
     def _determine_category(self, description: str, category_name: str) -> Optional[Dict]:
+        """Określa kategorię i ewentualnie nadpisuje opis"""
         desc_lower = description.lower()
 
         if "transfer" in category_name.lower() or "transfer wewnętrzny" in desc_lower or "przelew własny" in desc_lower:
-            return {'category_id': 2, 'name': 'Transfer', 'type': 'transfer'}
+            return {'category_id': 2, 'name': 'Transfer', 'type': 'transfer', 'description': 'Transfer'}
 
         for keyword, cat_info in self.CATEGORY_KEYWORDS.items():
             if keyword in desc_lower:
-                return cat_info
+                # Zwróć kopię z ewentualnym nadpisaniem opisu
+                result = cat_info.copy()
+                if 'description' in cat_info:
+                    result['description'] = cat_info['description']
+                return result
 
         return None
