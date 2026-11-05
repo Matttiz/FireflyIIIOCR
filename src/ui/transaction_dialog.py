@@ -13,16 +13,25 @@ from src.model.transaction import Transaction, Account, Category
 class TransactionDialog(QDialog):
     """Dialog do edycji/uzupełniania danych transakcji"""
 
+    MODE_EDIT = "edit"
+    MODE_COMPLETE = "complete"
+
     def __init__(
         self,
         transaction: Transaction,
         categories: List[Category],
         accounts: List[Account],
-        parent=None
+        parent=None,
+        mode: str = MODE_EDIT
     ):
         super().__init__(parent)
-        self.setWindowTitle("Uzupełnij dane transakcji")
-        self.transaction = transaction
+
+        if mode == self.MODE_COMPLETE:
+            self.setWindowTitle("Uzupełnij dane transakcji")
+            ok_text = "Utwórz"
+        else:
+            self.setWindowTitle("Edytuj transakcję")
+            ok_text = "Zapisz"
 
         layout = QFormLayout()
 
@@ -91,7 +100,7 @@ class TransactionDialog(QDialog):
 
         # Przyciski
         btn_layout = QHBoxLayout()
-        ok_btn = QPushButton("Utwórz")
+        ok_btn = QPushButton(ok_text)
         cancel_btn = QPushButton("Anuluj")
         ok_btn.clicked.connect(self.accept)
         cancel_btn.clicked.connect(self.reject)

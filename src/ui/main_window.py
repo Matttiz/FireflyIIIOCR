@@ -461,7 +461,8 @@ class MainWindow(QMainWindow):
                     trans,
                     [Category(**c) for c in self.categories],
                     [Account(**a) for a in self.accounts],
-                    self
+                    self,
+                    mode=TransactionDialog.MODE_COMPLETE
                 )
                 if dialog.exec():
                     updated = dialog.get_transaction()
