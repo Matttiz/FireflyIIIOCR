@@ -30,7 +30,8 @@ class BlockTransactionParser:
 
         # Wzorce
         # Obsługuje: -10,00 PLN, +2,00 PLN, —10,00 PLN, —-26,56 PLN (podwójny dash)
-        self.amount_pattern = re.compile(r'(?:^|\s)([+-—–]+\s*\d+[.,]\d{2})(?:\s*PLN|\s+|$)')
+        # Wzorzec wymaga, aby znak był na początku (po białym znaku) i cyfry od razu po znaku
+        self.amount_pattern = re.compile(r'(?:^|\s)([+-—–])\s*(\d{1,3}(?:[.,]\d{2})?)(?:\s*PLN|\s+|$)')
 
         # Prefiksy dni (z kropkami i bez)
         self.day_prefixes = ['Wczoraj', 'Dziś', 'Pn', 'Pn.', 'Wt', 'Wt.', 'Śr', 'Śr.', 'Cz', 'Cz.', 'Pt', 'Pt.', 'Sb', 'Sb.', 'Nd', 'Nd.',
@@ -162,6 +163,12 @@ class BlockTransactionParser:
         # Podział linii po głównej (2 i 3)
         desc_part2 = ""
         category_name = ""
+
+        # Sprawdź też główną linię przed kwotą na "transfer wewnętrzny" / "przelew własny"
+        main_desc_before_amount = main_line[:amount_match.start()].strip().lower()
+        if 'transfer wewnętrzny' in main_desc_before_amount or 'przelew własny' in main_desc_before_amount or \
+           ('transfer' in main_desc_before_amount and 'wewnętrzny' in main_desc_before_amount):
+            category_name = "Transfer"
 
         for extra_line in block_lines[main_line_idx + 1:]:
             if self.transfer_pattern.search(extra_line):
