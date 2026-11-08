@@ -94,8 +94,7 @@ class TransactionTableView(QWidget):
         # Data columns: all stretch equally to fill remaining space
         for i in range(1, 8):
             header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
-        # Store initial stretch factors
-        self._column_stretch_factors = stretch_factors
+        # Column stretch factors stored elsewhere; table initialized above
         self.table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
         )
