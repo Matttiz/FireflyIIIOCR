@@ -81,22 +81,22 @@ class TransactionTableView(QWidget):
             "✓", "Rodzaj", "Data", "Opis", "Kwota",
             "Kategoria", "Konto źródłowe", "Konto docelowe"
         ])
-        # Columns with proportional initial sizes, all resizable manually
+        # Columns that auto-resize with window - all Stretch mode
         header = self.table.horizontalHeader()
-        # Checkbox column: narrow, fixed but resizable within limits
+        # Checkbox column: fixed width within limits
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
         self.table.setColumnWidth(0, 38)
         header.setMinimumSectionSize(20)
         header.setMaximumSectionSize(50)
 
-        # Data columns: initial proportional sizes, user can resize manually
-        # Original proportions based on 1.96 aspect ratio: Opis largest, then Konta, etc.
-        initial_widths = [38, 100, 125, 250, 100, 150, 200, 200]
+        # Data columns: all stretch to fill available space proportionally
+        # Initial widths are set as minimums; they'll scale with window
+        initial_widths = [38, 80, 100, 200, 80, 120, 150, 150]
         for i, width in enumerate(initial_widths):
             if i == 0:
                 continue  # Already set
             self.table.setColumnWidth(i, width)
-            header.setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
+            header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
         # Column stretch factors stored elsewhere; table initialized above
         self.table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
