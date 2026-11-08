@@ -3,7 +3,7 @@ Parser transakcji z OCR zrzutów ekranu banku.
 Używa parsera blokowego (BlockTransactionParser) dla transakcji z kolumnowym układem.
 """
 import logging
-from typing import List
+from typing import List, Dict, Any, Optional
 
 from src.model.transaction import Transaction
 from src.ocr.block_parser import BlockTransactionParser
@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 class TransactionParser:
     """Parser transakcji z OCR zrzutów ekranu banku - deleguje do BlockTransactionParser."""
 
-    def __init__(self, accounts: list, default_destination_id: int):
+    def __init__(self, accounts: List[Dict[str, Any]], default_destination_id: int):
         self.accounts = accounts
         self.default_destination_id = default_destination_id
-        self.block_parser: BlockTransactionParser = None
+        self.block_parser: Optional[BlockTransactionParser] = None
 
     def _init_block_parser(self):
         """Inicjalizuje parser blokowy z aktualnymi kontami i keywords."""
@@ -42,12 +42,13 @@ class TransactionParser:
     def parse_lines(self, lines: List[str]) -> List[Transaction]:
         """Parsuje linie OCR na listę transakcji używając parsera blokowego."""
         self._init_block_parser()
+        assert self.block_parser is not None  # _init_block_parser guarantees this
         logger.info(f"Rozpoczynam parsowanie {len(lines)} wierszy (block mode)")
         transactions = self.block_parser.parse_blocks(lines)
         logger.info(f"Zparsowano {len(transactions)} transakcji")
         return transactions
 
-    def update_accounts(self, accounts: list, default_destination_id: int):
+    def update_accounts(self, accounts: List[Dict[str, Any]], default_destination_id: int):
         """Aktualizuje parser o nowe konta - reinicjalizuje block_parser."""
         self.accounts = accounts
         self.default_destination_id = default_destination_id

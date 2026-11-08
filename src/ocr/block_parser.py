@@ -5,13 +5,14 @@ Używa oddzielnych klas: CategoryClassifier, AccountMatcher, TransferMerger
 """
 import re
 from datetime import datetime, date
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any
 import logging
 
 from src.model.transaction import Transaction
 from src.ocr.category_classifier import CategoryClassifier
 from src.ocr.account_matcher import AccountMatcher, TransactionTypeResolver
 from src.ocr.transfer_merger import TransferMerger
+from src.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,17 +25,25 @@ class BlockTransactionParser:
     Wiersz 3: Dodatkowy opis (adres itp.)
     """
 
-    def __init__(self, accounts: List[Dict], default_destination_id: int):
+    def __init__(self, accounts: List[Dict[str, Any]], default_destination_id: int, account_keywords: Optional[Dict[str, Any]] = None):
         self.accounts = accounts
         self.default_destination_id = default_destination_id
 
+        # Load settings
+        settings = get_settings()
+        self.cat = settings.categories
+        self.timing = settings.timing
+        self.features = settings.features
+
         # Wzorce
-        # Obsługuje: -10,00 PLN, +2,00 PLN, —10,00 PLN, —-26,56 PLN (podwójny dash)
-        # Wzorzec wymaga, aby znak był na początku (po białym znaku) i cyfry od razu po znaku
-        self.amount_pattern = re.compile(r'(?:^|\s)([+-—–])\s*(\d{1,3}(?:[.,]\d{2})?)(?:\s*PLN|\s+|$)')
+        # Obsługuje: -10,00 PLN, +2,00 PLN, —10,00 PLN, —-26,56 PLN (podwójny dash), ---10,00 PLN
+        # Wzorzec szuka znaku +/-/—/– na początku (po białym znaku) followed by cyfry,
+        # a wartość musi być seguida przez 'PLN' (nie samo spacje koniec linii)
+        # Używamy finditer i bierzemy ostatni match (który zawiera PLN), żeby uniknąć fałszowych dopasowań np. '01' z numeru karty
+        self.amount_pattern = re.compile(r'(?:^|\s)([+\-—–]+)\s*(\d+(?:[.,]\d{2})?)\s*PLN')
 
         # Prefiksy dni (z kropkami i bez)
-        self.day_prefixes = ['Wczoraj', 'Dziś', 'Pn', 'Pn.', 'Wt', 'Wt.', 'Śr', 'Śr.', 'Cz', 'Cz.', 'Pt', 'Pt.', 'Sb', 'Sb.', 'Nd', 'Nd.',
+        self.day_prefixes = ['Wczoraj', 'Dziś', 'Pn', 'Pn.', 'Wt', 'Wt.', 'Śr', 'Śr.', 'Cz', 'Cz.', 'Pt', 'Pt.', 'Pi', 'Pi.', 'Sb', 'Sb.', 'Nd', 'Nd.',
                              'Pon', 'Pon.', 'Wto', 'Wto.', 'Śro', 'Śro.', 'Czw', 'Czw.', 'Pią', 'Pią.', 'Sob', 'Sob.', 'Nie', 'Nie.']
 
         self.start_transaction_pattern = re.compile(
@@ -47,16 +56,11 @@ class BlockTransactionParser:
 
         # Nowe oddzielne komponenty
         # Account keywords: mapowanie słów kluczowych (banki, numery kart) na ID kont
-        account_keywords = {
-            'ing': 2,           # ING Bank Śląski
-            'komfort': 2,       # Konto Komfort
-            '4246': 2,          # Numer karty
-            'visa': 2,          # Typ karty
-            'mastercard': 2,
-        }
+        if account_keywords is None:
+            account_keywords = {}
         self.category_classifier = CategoryClassifier()
         self.account_matcher = AccountMatcher(accounts, account_keywords)
-        self.transfer_merger = TransferMerger(default_destination_id)
+        self.transfer_merger = TransferMerger(default_destination_id, accounts)
 
     def parse_blocks(self, lines: List[str]) -> List[Transaction]:
         """Grupuje linie w bloki, parsuje, a potem łączy pary transferów wewnętrznych"""
@@ -79,9 +83,9 @@ class BlockTransactionParser:
     def _group_into_blocks(self, lines: List[str]) -> List[List[str]]:
         """Grupuje linie w bloki - nowa transakcja gdy linia zaczyna się od daty/dnia.
         Linie przed pierwszą transakcją (np. adres sklepu, konto) są dołączane do pierwszego bloku."""
-        blocks = []
-        current_block = []
-        pre_header_lines = []  # Linie przed pierwszą transakcją (adres, konto)
+        blocks: List[List[str]] = []
+        current_block: List[str] = []
+        pre_header_lines: List[str] = []  # Linie przed pierwszą transakcją (adres, konto)
 
         for line in lines:
             line = line.strip()
@@ -143,10 +147,14 @@ class BlockTransactionParser:
         if not amount_match:
             return None
 
-        amount_raw = amount_match.group(1)
+        # amount_match.group(1) to znak (+, -), group(2) to wartość liczbowa (z przecinkiem np. "0,50")
+        # Regex: r'(?:^|\s)([+-—–])\s*(\d{1,3}(?:[.,]\d{2})?)(?:\s*PLN|\s+|$)'
+        amount_sign_raw = amount_match.group(1)
+        amount_value_str = amount_match.group(2)  # np. "0,50" lub "50" (bez znaku)
 
         # Użyj TransactionTypeResolver do wyciągnięcia znaku i wartości
-        sign, amount_val = TransactionTypeResolver.resolve_from_amount(amount_raw)
+        # Resolver expects full string with sign, so build it
+        sign, amount_val = TransactionTypeResolver.resolve_from_amount(amount_sign_raw + amount_value_str)
 
         # Opis z głównej linii (przed kwotą)
         desc_part1 = main_line[:amount_match.start()].strip()
@@ -173,9 +181,17 @@ class BlockTransactionParser:
         for extra_line in block_lines[main_line_idx + 1:]:
             if self.transfer_pattern.search(extra_line):
                 category_name = "Transfer"
-            elif not self.amount_pattern.search(extra_line):
-                if any(cat in extra_line for cat in ['Rozrywka', 'Spożywcze', 'Pozostałe', 'Nie analizuj']):
-                    category_name = extra_line
+            else:
+                has_amount = bool(self.amount_pattern.search(extra_line))
+                if not has_amount:
+                    # Pomijamy linie będące tylko nazwami kategorii/śmieciami OCR jak "Rozrywka i podróże", "i" itp.
+                    if any(cat in extra_line for cat in ['Rozrywka', 'Spożywcze', 'Pozostałe', 'Nie analizuj']):
+                        category_name = extra_line
+                        continue
+                    if len(extra_line) <= 3 and extra_line.isalpha():
+                        # Pojedyncze litery / śmieci OCR
+                        continue
+                    desc_part2 += " " + extra_line
                 else:
                     desc_part2 += " " + extra_line
 
@@ -187,10 +203,28 @@ class BlockTransactionParser:
         category = self.category_classifier.classify(full_desc, category_name)
 
         # Dopasuj konto (używając AccountMatcher)
-        # Najpierw w account_part, potem w full_desc
-        matched_account = self.account_matcher.find_account(account_part)
+        # Najpierw szukaj w liniach pre-header - mogą zawierać nazwiska kont
+        matched_account = None
+        for i in range(main_line_idx):
+            line_account = self.account_matcher.find_account(block_lines[i])
+            if line_account:
+                matched_account = line_account
+                break
+
+        # Sprawdź też account_part
+        if not matched_account:
+            matched_account = self.account_matcher.find_account(account_part)
+
+        # Fallback na pełny opis
         if not matched_account:
             matched_account = self.account_matcher.find_account(full_desc)
+
+        # Dodatkowa ochrona: jeśli konto zawiera "Saldo początkowe", odrzuć je
+        if matched_account:
+            acc_name_lower = matched_account['name'].lower()
+            if 'saldo początkowe' in acc_name_lower:
+                logger.debug(f"Odrzucono konto zawierające 'Saldo początkowe': {matched_account['name']}")
+                matched_account = None
 
         source_id = None
         destination_id = None
@@ -201,14 +235,57 @@ class BlockTransactionParser:
             acc_id = matched_account['id']
             if sign == '+':
                 destination_id = acc_id
+                # Dla wpłaty: sprawdź czy to transfer wewnętrzny/SmartSaver
+                # Jeśli tak, źródło to konto źródłowe z transferu (np. ING Direct), nie Cash account
+                is_internal_transfer = (
+                    'przelew własny' in full_desc.lower() or
+                    'transfer wewnętrzny' in full_desc.lower() or
+                    'smart saver' in full_desc.lower() or
+                    'przelew wewnętrzny' in full_desc.lower()
+                )
+                if is_internal_transfer:
+                    # Dla transferów wewnętrznych szukaj konta źródłowego w tekście (np. "Direct", "KONTO Direct")
+                    source_account = self.account_matcher.find_source_account_for_transfer(full_desc, self.accounts)
+                    if source_account:
+                        source_id = source_account['id']
+                    else:
+                        cash_account = self.account_matcher.find_cash_account(self.accounts)
+                        if cash_account:
+                            source_id = cash_account['id']
+                else:
+                    # Dla zwykłych wpłat (np. odsetki): źródło to Cash account
+                    cash_account = self.account_matcher.find_cash_account(self.accounts)
+                    if cash_account:
+                        source_id = cash_account['id']
             else:
                 source_id = acc_id
+                # Dla wydatku (podatek): docelowe to Cash account
+                cash_account = self.account_matcher.find_cash_account(self.accounts)
+                if cash_account:
+                    destination_id = cash_account['id']
 
         # Default destination jeśli nie znaleziono
         if destination_id is None and sign == '+':
+            # Dla wpłaty zawsze fallback na default_destination_id
             destination_id = self.default_destination_id
-        if source_id is None and sign == '-':
-            source_id = self.default_destination_id
+        if destination_id is None and sign == '-':
+            # Dla wydatek domyśl destinations to Cash account (gotówka)
+            cash_account = self.account_matcher.find_cash_account(self.accounts)
+            if cash_account:
+                destination_id = cash_account['id']
+            else:
+                destination_id = self.default_destination_id
+        # Dla wydatków NIE ustawiamy source_id jako Cash account fallback, CHYBA ŻE to nie jest transfer/deposit
+        # Ale dla transferu/deposit zachowaj default_destination_id jeśli brak
+        if source_id is None:
+            if sign == '+':
+                # Wpłata - jeśli nie znaleziono konta docelowego, źródło to Cash account
+                cash_account = self.account_matcher.find_cash_account(self.accounts)
+                if cash_account:
+                    source_id = cash_account['id']
+            else:
+                # Wypłata bez źródła - NIE ustawiaj Cash account jako źródło, zostaw None żeby auto_completer znalazł
+                pass
 
         # Określ typ transakcji (używając TransactionTypeResolver)
         # force_sign_based=True: na etapie parsowania zawsze używamy znaku kwoty
@@ -217,6 +294,9 @@ class BlockTransactionParser:
 
         # Użyj opisu z kategorii jeśli dostępny, inaczej pełny opis
         final_description = category.get('description', full_desc) if category else full_desc
+
+        # Wyczyść opis z artefaktów OCR na początku (np. "0> ", "© ", ". ", "e ")
+        final_description = self._clean_description_start(final_description)
 
         raw_line = ' | '.join(block_lines)
 
@@ -247,3 +327,21 @@ class BlockTransactionParser:
         desc = self.start_transaction_pattern.sub('', desc).strip()
         desc = re.sub(r'^\d{2}[./-]\d{2}[./-]\d{2,4}\s*', '', desc).strip()
         return desc
+
+    def _clean_description_start(self, desc: str) -> str:
+        """
+        Usuwa artefakty OCR na początku opisu.
+        Typowe wzorce: '0> ', '© ', '. ', 'e ', '©© ', 'c ', 'l '
+        """
+        # Usuń znaki na początku: cyfra + >, ©, ., e, itp. po których jest spacja
+        patterns = [
+            r'^\d+[>)]\s+',     # "0> ", "1) ", "2> " itp.
+            r'^©+\s+',          # "© ", "©© " itp.
+            r'^\.\s+',          # ". " na początku
+            r'^[eEcClL]\s+',    # "e ", "E ", "c ", "C ", "l ", "L " itp.
+            r'^\(it\)\s+',      # "(it) " na początku
+            r'^\(?it\)?\s+',    # "it) ", "(it ", "it " itp.
+        ]
+        for pattern in patterns:
+            desc = re.sub(pattern, '', desc, flags=re.IGNORECASE)
+        return desc.strip()
