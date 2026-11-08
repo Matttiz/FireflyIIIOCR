@@ -58,7 +58,15 @@ pip install -r requirements.txt
    ```env
    API_BASE=https://twoj-firefly.pl/api/v1
    API_TOKEN=twój_personel_access_token
+   
+   # Opcjonalnie: ustawienia logowania
+   LOG_LEVEL=DEBUG
+   LOG_TO_CONSOLE=True
    ```
+   
+   **Ustawienia logowania:**
+   - `LOG_LEVEL` — poziom logowania: `DEBUG`, `INFO`, `WARNING`, `ERROR` (domyślnie: `INFO`)
+   - `LOG_TO_CONSOLE` — czy logować do konsoli oprócz pliku `/tmp/firefly_ocr.log` (domyślnie: `False`)
 
 2. Uruchom aplikację:
    ```bash

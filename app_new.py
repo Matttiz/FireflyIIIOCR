@@ -9,16 +9,19 @@ from src.api.firefly_client import FireflyApiClient, FireflyDataManager
 from src.ocr.ocr_processor import OcrProcessor
 from src.ocr.transaction_parser import TransactionParser
 from src.ui.main_window import MainWindow
+from src.config import get_settings
 
 
 # Konfiguracja logowania
+settings = get_settings()
+log_handlers = [logging.FileHandler('/tmp/firefly_ocr.log', encoding='utf-8')]
+if settings.LOG_TO_CONSOLE:
+    log_handlers.append(logging.StreamHandler(sys.stdout))
+
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('/tmp/firefly_ocr.log', encoding='utf-8'),
-        logging.StreamHandler(sys.stdout)
-    ]
+    handlers=log_handlers
 )
 
 logger = logging.getLogger(__name__)

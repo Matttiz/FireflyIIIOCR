@@ -126,6 +126,7 @@ class Settings(BaseSettings):
     # Debug
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
+    LOG_TO_CONSOLE: bool = False
 
 
 # Globalna instancja (singleton)
