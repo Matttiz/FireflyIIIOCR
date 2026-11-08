@@ -9,19 +9,20 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.ocr.block_parser import BlockTransactionParser
+from src.ocr.transaction_parser import TransactionParser
 from src.model.transaction import Transaction
 
 
 def load_accounts() -> list:
     """Load default test accounts matching BlockTransactionParser's account_keywords."""
     return [
-        {'id': 1, 'name': 'E KONTO Direct'},
-        {'id': 2, 'name': 'ING Bank Śląski  Komfort (Wspólne)'},  # matches 'ing', 'komfort', '4246', 'visa'
-        {'id': 3, 'name': 'Millennium'},
-        {'id': 4, 'name': 'KONTO Direct'},
-        {'id': 5, 'name': 'E Smart Saver'},
-        {'id': 6, 'name': 'E KONTO Komfort'},
-        {'id': 7, 'name': 'Cash account'},
+        {'id': 1, 'name': 'KONTO Direct', 'type': 'asset'},
+        {'id': 2, 'name': 'ING Bank Śląski  Komfort (Wspólne)', 'type': 'asset'},  # matches 'ing', 'komfort', '4246', 'visa'
+        {'id': 3, 'name': 'Millennium', 'type': 'asset'},
+        {'id': 4, 'name': 'KONTO Direct', 'type': 'asset'},
+        {'id': 5, 'name': 'Smart Saver', 'type': 'asset'},
+        {'id': 6, 'name': 'KONTO Komfort', 'type': 'asset'},
+        {'id': 7, 'name': 'Cash account', 'type': 'asset'},
     ]
 
 
@@ -33,8 +34,9 @@ def parse_ocr_file(file_path: str, accounts: list = None, default_dest_id: int =
     with open(file_path, 'r', encoding='utf-8') as f:
         lines = [line.strip() for line in f if line.strip()]
 
-    parser = BlockTransactionParser(accounts, default_dest_id)
-    return parser.parse_blocks(lines)
+    # Use TransactionParser which builds keywords from accounts
+    parser = TransactionParser(accounts, default_dest_id)
+    return parser.parse_lines(lines)
 
 
 def print_transactions(transactions: list[Transaction], accounts: list = None):

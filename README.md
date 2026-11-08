@@ -23,12 +23,16 @@ src/
 │   ├── firefly_client.py   # FireflyApiClient, FireflyDataManager
 ├── model/             # Modele danych
 │   └── transaction.py      # Transaction, Account, Category (dataclassy)
-├── ocr/               # Przetwarzanie OCR
+├── ocr/               # Przetwarzanie OCR (Clean Architecture / KISS)
 │   ├── ocr_processor.py    # OcrProcessor (Tesseract wrapper)
-│   └── transaction_parser.py # TransactionParser (parsowanie linii)
+│   ├── transaction_parser.py # TransactionParser (fasada delegująca)
+│   ├── block_parser.py     # BlockTransactionParser (parser blokowy)
+│   ├── account_matcher.py  # AccountMatcher (dopasowanie kont i keywords)
+│   ├── category_classifier.py # CategoryClassifier (klasyfikacja kategorii)
+│   └── transfer_merger.py  # TransferMerger (łączenie transferów)
 ├── services/          # Logika biznesowa
 │   └── transaction_services.py # Matcher, AutoCompleter, Validator
-└── ui/                # Interfejs użytkownika
+└── ui/                # Interfejs użytkownika (PySide6)
     ├── main_window.py      # MainWindow, ClipboardWatcher, TransactionTableView
     └── transaction_dialog.py # Dialog edycji transakcji
 ```
@@ -72,14 +76,14 @@ pip install -r requirements.txt
 7. **Zaznacz** transakcje do utworzenia (checkbox w pierwszej kolumnie)
 8. **Kliknij "Stwórz zaznaczone"** – transakcje trafią do Firefly III
 
-## 🔧 Tryby OCR (PSM)
+## 🔧 Architektura OCR i Zasady Clean Code
 
-| Tryb | Opis | Zastosowanie |
-|------|------|--------------|
-| **PSM 12** | Pojedyncza linia (domyślny) | Lista transakcji – każda w nowej linii |
-| PSM 6 | Jednolity blok | Tabele |
-| PSM 4 | Pojedyncza kolumna | Wąskie listy |
-| PSM 3 | Automatyczne | Ogólne |
+Moduł OCR został zrefaktoryzowany zgodnie z zasadami **Clean Code** oraz **KISS** (Single Responsibility Principle):
+- **TransactionParser** – działa jako lekka fasada delegująca do parsera blokowego.
+- **BlockTransactionParser** – obsługuje układ kolumnowy i wielowierszowy.
+- **AccountMatcher** – centralizuje mapowanie i budowanie słów kluczowych kont (banki, numery kart).
+- **CategoryClassifier** – odpowiada za reguły słownikowe i kategoryzację.
+- **TransferMerger** – wykrywa i łączy pary transferów wewnętrznych.
 
 ## 🧠 Inteligentne funkcje
 

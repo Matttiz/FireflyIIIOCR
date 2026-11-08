@@ -1,0 +1,1468 @@
+{
+  "data": [
+    {
+      "type": "categories",
+      "id": "9",
+      "attributes": {
+        "created_at": "2025-11-20T11:14:36+01:00",
+        "updated_at": "2025-11-20T11:14:36+01:00",
+        "name": "800 plus",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/9",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/9"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "60",
+      "attributes": {
+        "created_at": "2026-04-13T19:12:01+02:00",
+        "updated_at": "2026-04-13T19:12:01+02:00",
+        "name": "AGD",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/60",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/60"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "29",
+      "attributes": {
+        "created_at": "2025-12-15T16:26:09+01:00",
+        "updated_at": "2025-12-15T16:26:09+01:00",
+        "name": "Bankomat",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/29",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/29"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "67",
+      "attributes": {
+        "created_at": "2026-06-30T23:26:04+02:00",
+        "updated_at": "2026-06-30T23:26:04+02:00",
+        "name": "Biurowe",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/67",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/67"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "13",
+      "attributes": {
+        "created_at": "2025-11-22T13:08:49+01:00",
+        "updated_at": "2025-11-22T13:08:49+01:00",
+        "name": "Chemia domowa i \u015brodki higieniczne",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/13",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/13"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "23",
+      "attributes": {
+        "created_at": "2025-12-13T08:34:28+01:00",
+        "updated_at": "2025-12-13T08:34:28+01:00",
+        "name": "Doch\u00f3d",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/23",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/23"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "77",
+      "attributes": {
+        "created_at": "2026-10-04T21:51:09+02:00",
+        "updated_at": "2026-10-04T21:51:09+02:00",
+        "name": "Dofinansowanie",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/77",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/77"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "27",
+      "attributes": {
+        "created_at": "2025-12-13T08:55:33+01:00",
+        "updated_at": "2025-12-13T08:55:33+01:00",
+        "name": "Elektronika",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/27",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/27"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "7",
+      "attributes": {
+        "created_at": "2025-11-20T09:52:15+01:00",
+        "updated_at": "2025-11-20T09:52:15+01:00",
+        "name": "Hazard",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/7",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/7"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "5",
+      "attributes": {
+        "created_at": "2025-11-20T09:50:05+01:00",
+        "updated_at": "2025-11-20T09:50:05+01:00",
+        "name": "Kot",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/5",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/5"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "10",
+      "attributes": {
+        "created_at": "2025-11-20T21:54:37+01:00",
+        "updated_at": "2025-11-20T21:54:37+01:00",
+        "name": "Kredyt",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/10",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/10"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "41",
+      "attributes": {
+        "created_at": "2026-01-20T21:47:19+01:00",
+        "updated_at": "2026-01-20T21:47:19+01:00",
+        "name": "Kredyt hipoteczny",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/41",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/41"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "25",
+      "attributes": {
+        "created_at": "2025-12-13T08:37:25+01:00",
+        "updated_at": "2025-12-13T08:37:25+01:00",
+        "name": "Ksi\u0119gowo\u015b\u0107",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/25",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/25"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "21",
+      "attributes": {
+        "created_at": "2025-12-07T09:21:25+01:00",
+        "updated_at": "2025-12-07T09:21:25+01:00",
+        "name": "Kurierzy",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/21",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/21"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "20",
+      "attributes": {
+        "created_at": "2025-12-02T09:59:42+01:00",
+        "updated_at": "2025-12-02T09:59:42+01:00",
+        "name": "Leki",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/20",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/20"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "58",
+      "attributes": {
+        "created_at": "2026-04-06T15:32:09+02:00",
+        "updated_at": "2026-04-06T15:32:09+02:00",
+        "name": "Mandat",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/58",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/58"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "55",
+      "attributes": {
+        "created_at": "2026-04-06T14:43:12+02:00",
+        "updated_at": "2026-04-06T14:43:12+02:00",
+        "name": "Meble",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/55",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/55"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "70",
+      "attributes": {
+        "created_at": "2026-07-16T13:18:59+02:00",
+        "updated_at": "2026-07-16T13:18:59+02:00",
+        "name": "Narz\u0119dzia",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/70",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/70"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "35",
+      "attributes": {
+        "created_at": "2026-01-02T12:00:27+01:00",
+        "updated_at": "2026-01-02T12:00:27+01:00",
+        "name": "Odsetki od kapita\u0142u",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/35",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/35"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "15",
+      "attributes": {
+        "created_at": "2025-11-24T09:41:26+01:00",
+        "updated_at": "2025-11-24T09:41:26+01:00",
+        "name": "Ogrodnictwo",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/15",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/15"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "33",
+      "attributes": {
+        "created_at": "2025-12-28T11:19:55+01:00",
+        "updated_at": "2025-12-28T11:19:55+01:00",
+        "name": "Okoliczno\u015bciowe",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/33",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/33"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "50",
+      "attributes": {
+        "created_at": "2026-03-02T18:15:19+01:00",
+        "updated_at": "2026-03-02T18:15:19+01:00",
+        "name": "Op\u0142aty Bankowe",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/50",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/50"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "16",
+      "attributes": {
+        "created_at": "2025-11-25T09:45:24+01:00",
+        "updated_at": "2025-11-25T09:45:24+01:00",
+        "name": "Op\u0142aty sta\u0142e",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/16",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/16"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "24",
+      "attributes": {
+        "created_at": "2025-12-13T08:35:19+01:00",
+        "updated_at": "2025-12-13T08:35:19+01:00",
+        "name": "Opodatkowanie pracy",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/24",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/24"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "18",
+      "attributes": {
+        "created_at": "2025-12-02T09:40:16+01:00",
+        "updated_at": "2025-12-02T09:40:16+01:00",
+        "name": "Podatek",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/18",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/18"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "56",
+      "attributes": {
+        "created_at": "2026-04-06T14:59:35+02:00",
+        "updated_at": "2026-04-06T14:59:35+02:00",
+        "name": "Po\u017cyczka",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/56",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/56"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "30",
+      "attributes": {
+        "created_at": "2025-12-15T16:29:43+01:00",
+        "updated_at": "2025-12-15T16:29:43+01:00",
+        "name": "Prezent",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/30",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/30"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "31",
+      "attributes": {
+        "created_at": "2025-12-17T21:31:32+01:00",
+        "updated_at": "2025-12-17T21:31:32+01:00",
+        "name": "Prowizja za wyp\u0142at\u0119",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/31",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/31"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "66",
+      "attributes": {
+        "created_at": "2026-06-05T13:38:53+02:00",
+        "updated_at": "2026-06-05T13:38:53+02:00",
+        "name": "Przelew",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/66",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/66"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "26",
+      "attributes": {
+        "created_at": "2025-12-13T08:51:23+01:00",
+        "updated_at": "2025-12-13T08:51:23+01:00",
+        "name": "Restauracja",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/26",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/26"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "19",
+      "attributes": {
+        "created_at": "2025-12-02T09:55:08+01:00",
+        "updated_at": "2025-12-02T09:55:08+01:00",
+        "name": "Rozrywka",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/19",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/19"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "54",
+      "attributes": {
+        "created_at": "2026-04-06T14:10:23+02:00",
+        "updated_at": "2026-04-06T14:10:23+02:00",
+        "name": "SmartSaver",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/54",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/54"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "28",
+      "attributes": {
+        "created_at": "2025-12-13T09:01:39+01:00",
+        "updated_at": "2025-12-13T09:01:39+01:00",
+        "name": "Sp\u0142ata",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/28",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/28"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "34",
+      "attributes": {
+        "created_at": "2025-12-31T00:18:31+01:00",
+        "updated_at": "2025-12-31T00:18:31+01:00",
+        "name": "Sport",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/34",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/34"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "4",
+      "attributes": {
+        "created_at": "2025-11-20T09:46:42+01:00",
+        "updated_at": "2025-11-20T09:46:42+01:00",
+        "name": "Spo\u017cywcze",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/4",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/4"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "12",
+      "attributes": {
+        "created_at": "2025-11-22T13:05:34+01:00",
+        "updated_at": "2025-11-22T13:05:34+01:00",
+        "name": "Subskrypcje",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/12",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/12"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "68",
+      "attributes": {
+        "created_at": "2026-07-01T07:51:09+02:00",
+        "updated_at": "2026-07-01T07:51:09+02:00",
+        "name": "\u015awiadczenie",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/68",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/68"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "11",
+      "attributes": {
+        "created_at": "2025-11-22T12:05:30+01:00",
+        "updated_at": "2025-11-22T12:05:30+01:00",
+        "name": "Szparga\u0142y",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/11",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/11"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "8",
+      "attributes": {
+        "created_at": "2025-11-20T09:56:49+01:00",
+        "updated_at": "2025-11-20T09:56:49+01:00",
+        "name": "Transfer",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/8",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/8"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "2",
+      "attributes": {
+        "created_at": "2025-11-16T20:58:30+01:00",
+        "updated_at": "2025-11-16T20:58:30+01:00",
+        "name": "Transport",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/2",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/2"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "72",
+      "attributes": {
+        "created_at": "2026-08-16T14:25:21+02:00",
+        "updated_at": "2026-08-16T14:25:21+02:00",
+        "name": "Turystyka",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/72",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/72"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "14",
+      "attributes": {
+        "created_at": "2025-11-24T09:38:32+01:00",
+        "updated_at": "2025-11-24T09:38:32+01:00",
+        "name": "Ubrania",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/14",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/14"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "57",
+      "attributes": {
+        "created_at": "2026-04-06T15:10:18+02:00",
+        "updated_at": "2026-04-06T15:10:18+02:00",
+        "name": "Uroczysto\u015bci",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/57",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/57"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "62",
+      "attributes": {
+        "created_at": "2026-04-20T13:19:43+02:00",
+        "updated_at": "2026-04-20T13:19:43+02:00",
+        "name": "Us\u0142ugi rozliczeniowe",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/62",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/62"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "42",
+      "attributes": {
+        "created_at": "2026-01-21T10:33:37+01:00",
+        "updated_at": "2026-01-21T10:33:37+01:00",
+        "name": "Utrzymanie domu",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/42",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/42"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "73",
+      "attributes": {
+        "created_at": "2026-08-16T14:52:04+02:00",
+        "updated_at": "2026-08-16T14:52:04+02:00",
+        "name": "Uzgodnienie",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/73",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/73"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "6",
+      "attributes": {
+        "created_at": "2025-11-20T09:51:35+01:00",
+        "updated_at": "2025-11-20T09:51:35+01:00",
+        "name": "U\u017cytkowe",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/6",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/6"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "71",
+      "attributes": {
+        "created_at": "2026-07-20T11:56:53+02:00",
+        "updated_at": "2026-07-20T11:56:53+02:00",
+        "name": "Wyp\u0142ata",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/71",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/71"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "43",
+      "attributes": {
+        "created_at": "2026-01-21T12:37:02+01:00",
+        "updated_at": "2026-01-21T12:37:02+01:00",
+        "name": "Zabawki",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/43",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/43"
+        }
+      }
+    },
+    {
+      "type": "categories",
+      "id": "39",
+      "attributes": {
+        "created_at": "2026-01-15T16:20:04+01:00",
+        "updated_at": "2026-01-15T16:20:04+01:00",
+        "name": "Zwrot",
+        "notes": null,
+        "object_has_currency_setting": false,
+        "primary_currency_id": "5",
+        "primary_currency_name": "Polish z\u0142oty",
+        "primary_currency_code": "PLN",
+        "primary_currency_symbol": "z\u0142",
+        "primary_currency_decimal_places": 2,
+        "spent": null,
+        "pc_spent": null,
+        "earned": null,
+        "pc_earned": null,
+        "transferred": null,
+        "pc_transferred": null
+      },
+      "links": {
+        "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories\/39",
+        "0": {
+          "rel": "self",
+          "uri": "\/categories\/39"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "total": 50,
+      "count": 50,
+      "per_page": 50,
+      "current_page": 1,
+      "total_pages": 1
+    }
+  },
+  "links": {
+    "self": "https:\/\/firefly.matsurma.net\/api\/v1\/categories?limit=50&page=1",
+    "first": "https:\/\/firefly.matsurma.net\/api\/v1\/categories?limit=50&page=1",
+    "last": "https:\/\/firefly.matsurma.net\/api\/v1\/categories?limit=50&page=1"
+  }
+}
