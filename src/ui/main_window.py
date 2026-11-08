@@ -78,12 +78,14 @@ class TransactionTableView(QWidget):
             "✓", "Rodzaj", "Data", "Opis", "Kwota",
             "Kategoria", "Konto źródłowe", "Konto docelowe"
         ])
-        # Allow user to resize columns by dragging headers
+        # Allow user to resize columns and auto-adjust to window size
         header = self.table.horizontalHeader()
+        # Interactive allows user drag, StretchLastSection makes last column fill remaining space
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        # Set initial column widths
-        initial_widths = [30, 80, 120, 250, 80, 150, 200, 200]
-        for col, width in enumerate(initial_widths):
+        header.setStretchLastSection(True)
+        # Set minimum widths for readability
+        min_widths = [30, 70, 100, 200, 70, 120, 150, 150]
+        for col, width in enumerate(min_widths):
             self.table.setColumnWidth(col, width)
         self.table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
