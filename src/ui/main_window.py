@@ -379,6 +379,17 @@ class MainWindow(QMainWindow):
         table_height = self.table_view.height()
         logger.info(f"  TableView: {table_width}x{table_height} (aspect: {table_width/table_height:.2f})")
 
+    def _on_text_edit_resize(self, event):
+        """Called when TextEdit resizes - logs dimensions"""
+        # Call original resize if it was hooked
+        orig = getattr(self, '_text_edit_resize_orig', None)
+        if orig is not None:
+            orig(event)
+        # Log new size
+        text_width = self.text_edit.width()
+        text_height = self.text_edit.height()
+        logger.info(f"  TextEdit resized: {text_width}x{text_height} (aspect: {text_width/text_height:.2f})")
+
     def __init__(
         self,
         api_client: FireflyApiClient,
@@ -442,6 +453,10 @@ class MainWindow(QMainWindow):
         self.text_edit = QTextEdit()
         self.text_edit.setPlaceholderText("Tutaj pojawi się rozpoznany tekst, wiersz po wierszu…")
         self.text_edit.setMinimumHeight(200)
+        # Store reference to original resize event
+        self._text_edit_resize_orig = self.text_edit.resizeEvent
+        # Hook resizeEvent to log text edit size changes
+        self.text_edit.resizeEvent = lambda event: self._on_text_edit_resize(event)
 
         # Buttons
         self.ocr_button = QPushButton("Rozpoznaj tekst (OCR)")
