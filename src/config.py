@@ -102,6 +102,10 @@ class WindowSettings(BaseSettings):
     MIN_WIDTH: int = 800
     MIN_HEIGHT: int = 600
 
+
+class FeatureFlags(BaseSettings):
+    """Feature flags - włącz/wyłącz funkcje."""
+
     USE_BLOCK_PARSER: bool = True
     ENABLE_TRANSFER_MERGE: bool = True
     AUTO_CATEGORIZE: bool = True
@@ -126,6 +130,7 @@ class Settings(BaseSettings):
     ocr: OCRSettings = Field(default_factory=OCRSettings)
     firefly: FireflyAPISettings = Field(default_factory=FireflyAPISettings)
     paths: DataPathsSettings = Field(default_factory=DataPathsSettings)
+    window: WindowSettings = Field(default_factory=WindowSettings)
     features: FeatureFlags = Field(default_factory=FeatureFlags)
 
     # Debug

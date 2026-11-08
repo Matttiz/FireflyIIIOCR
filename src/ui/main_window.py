@@ -389,8 +389,10 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Firefly III — Clipboard")
         # Start with configured aspect ratio from WindowSettings
-        initial_width = WindowSettings.INITIAL_WIDTH
-        initial_height = WindowSettings.INITIAL_HEIGHT
+        from src.config import get_settings
+        settings = get_settings()
+        initial_width = settings.window.INITIAL_WIDTH
+        initial_height = settings.window.INITIAL_HEIGHT
         self.resize(initial_width, initial_height)
         logger.info(f"Window initialized: {initial_width}x{initial_height} (proportions: {initial_width/initial_height:.2f})")
 
