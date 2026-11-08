@@ -359,6 +359,23 @@ class TransactionTableView(QWidget):
 class MainWindow(QMainWindow):
     """Główne okno aplikacji"""
 
+    def _log_initial_layout(self):
+        """Log initial layout dimensions for debugging proportions"""
+        # Log main window
+        main_width = self.width()
+        main_height = self.height()
+        logger.info(f"MainWindow layout: {main_width}x{main_height} (aspect: {main_width/main_height:.2f})")
+
+        # Log text edit
+        text_width = self.text_edit.width()
+        text_height = self.text_edit.height()
+        logger.info(f"  TextEdit: {text_width}x{text_height} (aspect: {text_width/text_height:.2f})")
+
+        # Log table view
+        table_width = self.table_view.width()
+        table_height = self.table_view.height()
+        logger.info(f"  TableView: {table_width}x{table_height} (aspect: {table_width/table_height:.2f})")
+
     def __init__(
         self,
         api_client: FireflyApiClient,
@@ -403,6 +420,8 @@ class MainWindow(QMainWindow):
 
         self._setup_ui()
         self._connect_signals()
+        # Log main window initial layout
+        self._log_initial_layout()
 
     def _setup_ui(self):
         # Image preview
@@ -413,6 +432,11 @@ class MainWindow(QMainWindow):
         self.image_label.setStyleSheet("QLabel { border: 1px solid gray; padding: 8px; }")
 
         self.status = QLabel("Oczekiwanie na obraz…")
+
+        # Log text edit size for layout debugging
+        self.text_edit = QTextEdit()
+        self.text_edit.setPlaceholderText("Tutaj pojawi się rozpoznany tekst, wiersz po wierszu…")
+        self.text_edit.setMinimumHeight(200)
 
         # Buttons
         self.ocr_button = QPushButton("Rozpoznaj tekst (OCR)")
@@ -428,9 +452,6 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.create_button)
 
         # Text and table split
-        self.text_edit = QTextEdit()
-        self.text_edit.setPlaceholderText("Tutaj pojawi się rozpoznany tekst, wiersz po wierszu…")
-
         self.table_view = TransactionTableView()
         self.table_view.set_accounts_and_categories(
             [Account(**a) for a in self.accounts],
