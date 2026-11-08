@@ -1,0 +1,8 @@
+=== test_data/1.11.txt: 7 transactions ===
+  2026-11-01 | ZKH/4906/05/2020 Pozostałe wydatki 85081916372 | withdrawal | Cat:Opłaty Bankowe | 38.66 PLN | Millennium -> Cash account
+  2026-11-01 | ZKH/4906/05/2020 Pozostałe wydatki 90090614009 NE SONDA M | withdrawal | Cat:Opłaty Bankowe | 4.58 PLN | Millennium -> Cash account
+  2026-11-01 | Transfer | transfer | Cat:Transfer | 0.50 PLN | KONTO Direct -> Smart Saver
+  2026-11-01 | STS (transakcja 95309067305) | withdrawal | Cat:Hazard | 10.00 PLN | KONTO Direct -> Cash account
+  2026-11-01 | Transfer | transfer | Cat:Transfer | 0.10 PLN | KONTO Direct -> Smart Saver
+  2026-11-01 | Transfer | transfer | Cat:Transfer | 2.00 PLN | KONTO Direct -> Cash account
+  2026-11-01 | Transfer | transfer | Cat:Transfer | 50.00 PLN | KONTO Direct -> KONTO Direct

@@ -1,0 +1,7 @@
+=== test_data/part.txt: 6 transactions ===
+  2026-10-26 | Rossmann | withdrawal | Cat:Chemia domowa | 26.56 PLN | Millennium -> Cash account
+  2026-10-26 | Spar | withdrawal | Cat:Spożywcze | 36.76 PLN | Millennium -> Cash account
+  2026-10-26 | Aqua | withdrawal | Cat:Kot | 59.98 PLN | Millennium -> Cash account
+  2026-10-26 | Lidl | withdrawal | Cat:Spożywcze | 14.28 PLN | Millennium -> Cash account
+  2026-10-26 | Spar | withdrawal | Cat:Spożywcze | 97.81 PLN | KONTO Komfort -> Cash account
+  2026-10-26 | Rossmann | withdrawal | Cat:Chemia domowa | 17.99 PLN | KONTO Komfort -> Cash account

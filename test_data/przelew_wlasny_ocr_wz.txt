@@ -1,0 +1,2 @@
+=== test_data/przelew_wlasny_ocr.txt: 1 transactions ===
+  2026-11-03 | Transfer | transfer | Cat:Transfer | 100.00 PLN | KONTO Direct -> ING Bank Śląski  Komfort (Wspólne)

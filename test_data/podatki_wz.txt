@@ -1,0 +1,5 @@
+=== test_data/podatki.txt: 4 transactions ===
+  2026-11-01 | Podatek Belki | withdrawal | Cat:Podatek | 0.23 PLN | Smart Saver -> Cash account
+  2026-11-01 | Odsetki od kapitału | deposit | Cat:Odsetki od kapitału | 1.19 PLN | Cash account -> Smart Saver
+  2026-11-01 | Podatek Belki | withdrawal | Cat:Podatek | 0.22 PLN | KONTO Direct -> Cash account
+  2026-11-01 | Odsetki od kapitału | deposit | Cat:Odsetki od kapitału | 1.11 PLN | Cash account -> KONTO Direct

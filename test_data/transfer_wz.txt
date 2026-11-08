@@ -1,0 +1,2 @@
+=== test_data/transfer.txt: 1 transactions ===
+  2026-11-04 | Transfer | transfer | Cat:Transfer | 0.50 PLN | KONTO Direct -> Smart Saver

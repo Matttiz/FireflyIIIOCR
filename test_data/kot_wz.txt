@@ -1,0 +1,2 @@
+=== test_data/kot.txt: 1 transactions ===
+  2026-10-26 | Aqua | withdrawal | Cat:Kot | 59.98 PLN | Millennium -> Cash account

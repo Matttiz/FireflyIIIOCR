@@ -1,0 +1,2 @@
+=== test_data/mama.txt: 1 transactions ===
+  2026-11-02 | MAŁGORZATA OLSZEWSKA E KONTO Direct Przelew na telefon 48889***726. Prz elew na telefon | deposit | Cat:Dofinansowanie | 1000.00 PLN | Cash account -> KONTO Direct

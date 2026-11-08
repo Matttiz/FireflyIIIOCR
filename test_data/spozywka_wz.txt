@@ -1,0 +1,6 @@
+=== test_data/spozywka.txt: 5 transactions ===
+  2026-10-31 | Spar | withdrawal | Cat:Spożywcze | 24.85 PLN | KONTO Direct -> Cash account
+  2026-10-26 | Spar | withdrawal | Cat:Spożywcze | 36.76 PLN | Millennium -> Cash account
+  2026-10-26 | Lidl | withdrawal | Cat:Spożywcze | 14.28 PLN | Millennium -> Cash account
+  2026-10-26 | Spar | withdrawal | Cat:Spożywcze | 97.81 PLN | KONTO Komfort -> Cash account
+  2026-10-27 | Piekarnia | withdrawal | Cat:Spożywcze | 12.97 PLN | Millennium -> Cash account

@@ -1,0 +1,7 @@
+=== test_data/2.11.txt: 6 transactions ===
+  2026-11-02 | Transfer | transfer | Cat:Transfer | 2.00 PLN | Cash account -> Millennium
+  2026-11-02 | Transfer | transfer | Cat:Transfer | 6.45 PLN | KONTO Direct -> Smart Saver
+  2026-11-02 | PayU Płatność Grunwaldzka BLIK 02.11.2026 186 Poznan Nr transakcji 95319060926 helion.pl | withdrawal | Cat:Szpargały | 129.00 PLN | KONTO Direct -> Cash account
+  2026-11-02 | Transfer | transfer | Cat:Transfer | 0.50 PLN | KONTO Direct -> Smart Saver
+  2026-11-02 | STS (transakcja 95317814355) | withdrawal | Cat:Hazard | 10.00 PLN | KONTO Direct -> Cash account
+  2026-11-02 | MAŁGORZATA Przelew na telefon OLSZEWSKA 48889***726. Prz elew na telefon | deposit | Cat:Dofinansowanie | 1000.00 PLN | Cash account -> KONTO Direct

@@ -1,0 +1,2 @@
+=== test_data/glovo.txt: 1 transactions ===
+  2026-10-27 | GLOVO Płatność PIOTRKOWSKA BLIK 27.10.2026 LODZ Nr transakcji 95273767824 glovoapp.com/pl | withdrawal | Cat:Restauracja | 49.76 PLN | KONTO Komfort -> Cash account

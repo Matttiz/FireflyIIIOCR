@@ -1,0 +1,80 @@
+=== test_data/reszta_ocr.txt: 79 transactions ===
+  polsatboxgo.pl ul. Łubinowa 4A Warszawa 6 KONTO Direct Polsa | withdrawal | Cat:ID:None | 55.00 PLN | KONTO Direct -> Cash account
+  Transfer | transfer | Cat:Transfer | 0.50 PLN | KONTO Direct -> Smart Saver
+  Płatność kartą 05.11.2026 Nr karty 4246xx8124 Rozrywka i pod | withdrawal | Cat:Szpargały | 88.40 PLN | KONTO Direct -> Cash account
+  Przelew na telefon BLIK Pozostałe wpływy | deposit | Cat:Dofinansowanie | 150.00 PLN | Cash account -> Cash account
+  SKŁ 9131585581składkaPDEBET_O2 PZU-MOJA KARTA Z OCHR. PZU 42 | withdrawal | Cat:ID:None | 6.00 PLN | KONTO Direct -> Cash account
+  Transfer | deposit | Cat:Transport | 0.50 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 0.50 PLN | ID:None -> Cash account
+  STS (transakcja 95334583077) | withdrawal | Cat:Hazard | 10.00 PLN | KONTO Direct -> Cash account
+  ANTHROPIC* Płatność kartą CLAUDE 03.11.2026 SUB DUBLIN Nr ka | withdrawal | Cat:ID:None | 89.00 PLN | ID:None -> Cash account
+  Transfer | deposit | Cat:Transport | 100.00 PLN | Cash account -> Cash account
+  Transfer | withdrawal | Cat:Transport | 100.00 PLN | KONTO Direct -> Cash account
+  Przelew Nie analizuj własny | deposit | Cat:ID:None | 500.00 PLN | Cash account -> KONTO Komfort
+  Transfer | withdrawal | Cat:Transport | 500.00 PLN | KONTO Direct -> Cash account
+  Transfer | deposit | Cat:Transport | 0.50 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 0.50 PLN | ID:None -> Cash account
+  STS (transakcja 95327556982) | withdrawal | Cat:Hazard | 10.00 PLN | KONTO Direct -> Cash account
+  Transfer | deposit | Cat:Transport | 0.50 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 0.50 PLN | ID:None -> Cash account
+  Transfer | transfer | Cat:Transfer | 10.00 PLN | KONTO Direct -> Cash account
+  Transfer | deposit | Cat:Transport | 6.45 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 6.45 PLN | ID:None -> Cash account
+  PayU Płatność Grunwaldzka BLIK 02.11.2026 186 Poznan Nr tran | withdrawal | Cat:Szpargały | 129.00 PLN | KONTO Direct -> Cash account
+  Transfer | deposit | Cat:Transport | 0.50 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 0.50 PLN | ID:None -> Cash account
+  STS (transakcja 95317814355) | withdrawal | Cat:Hazard | 10.00 PLN | KONTO Direct -> Cash account
+  MAŁGORZATA Przelew na telefon OLSZEWSKA 48889***726. Prz ele | deposit | Cat:Dofinansowanie | 1000.00 PLN | Cash account -> KONTO Direct
+  ZKH/4906/05/2020 Pozostałe wydatki 85081916372 | withdrawal | Cat:ID:None | 38.66 PLN | Millennium -> Cash account
+  ZKH/4906/05/2020 Pozostałe wydatki 90090614009 | withdrawal | Cat:ID:None | 4.58 PLN | Millennium -> Cash account
+  Transfer | deposit | Cat:Transport | 0.50 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 0.50 PLN | ID:None -> Cash account
+  STS (transakcja 95309067305) | withdrawal | Cat:Hazard | 10.00 PLN | KONTO Direct -> Cash account
+  Transfer | transfer | Cat:Transfer | 0.10 PLN | KONTO Direct -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 2.00 PLN | KONTO Direct -> Cash account
+  Transfer | transfer | Cat:Transfer | 50.00 PLN | KONTO Direct -> Smart Saver
+  Podatek Belki | withdrawal | Cat:Podatek | 0.23 PLN | Smart Saver -> Cash account
+  Odsetki od kapitału | deposit | Cat:Odsetki od kapitału | 1.19 PLN | Cash account -> Smart Saver
+  Podatek Belki | withdrawal | Cat:Podatek | 0.22 PLN | KONTO Direct -> Cash account
+  Odsetki od kapitału | deposit | Cat:Odsetki od kapitału | 1.11 PLN | Cash account -> KONTO Direct
+  Spar | withdrawal | Cat:Spożywcze | 24.85 PLN | Millennium -> Cash account
+  Rossmann | withdrawal | Cat:Chemia domowa | 14.36 PLN | Millennium -> Cash account
+  Transfer | deposit | Cat:Transport | 1.50 PLN | Cash account -> Smart Saver
+  Transfer | withdrawal | Cat:Transport | 1.50 PLN | KONTO Direct -> Cash account
+  STS (transakcja 95302891937) | withdrawal | Cat:Hazard | 30.00 PLN | KONTO Direct -> Cash account
+  Transfer | deposit | Cat:Transport | 30.00 PLN | Cash account -> KONTO Direct
+  Transfer | withdrawal | Cat:Transport | 30.00 PLN | Smart Saver -> Cash account
+  Transfer | deposit | Cat:Transport | 0.50 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 0.50 PLN | ID:None -> Cash account
+  STS (transakcja 95301679260) | withdrawal | Cat:Hazard | 10.00 PLN | KONTO Direct -> Cash account
+  Transfer | deposit | Cat:Transport | 1.50 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 1.50 PLN | ID:None -> Cash account
+  STS (transakcja 95301650056) | withdrawal | Cat:Hazard | 30.00 PLN | KONTO Direct -> Cash account
+  Transfer | deposit | Cat:Transport | 0.50 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 0.50 PLN | ID:None -> Cash account
+  STS (transakcja 95298877851) | withdrawal | Cat:Hazard | 10.00 PLN | KONTO Direct -> Cash account
+  Transfer | transfer | Cat:Transfer | 50.00 PLN | KONTO Direct -> Smart Saver
+  Transfer | deposit | Cat:Transport | 0.50 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 0.50 PLN | ID:None -> Cash account
+  STS (transakcja 95294199881) | withdrawal | Cat:Hazard | 10.00 PLN | KONTO Direct -> Cash account
+  Opłata Finanse mies. karta Visa Zbliż. za okres od 29.08 do  | withdrawal | Cat:ID:None | 10.00 PLN | KONTO Komfort -> Cash account
+  Opłata Finanse za prowadzenie rachunku | withdrawal | Cat:ID:None | 15.00 PLN | KONTO Komfort -> Cash account
+  Transfer | deposit | Cat:Transport | 0.50 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 0.50 PLN | ID:None -> Cash account
+  STS (transakcja 95281164461) | withdrawal | Cat:Hazard | 10.00 PLN | KONTO Direct -> Cash account
+  Apteka Płatność FARMA kartą 28.10.2026 Grodzisk Nr karty 424 | withdrawal | Cat:ID:None | 618.00 PLN | KONTO Komfort -> Cash account
+  Transfer | transfer | Cat:Transfer | 560.00 PLN | Cash account -> KONTO Komfort
+  Rossmann | withdrawal | Cat:Chemia domowa | 59.28 PLN | KONTO Komfort -> Cash account
+  TEDI Płatność 7202 kartą GRODZISK 28.10.2026 Nr karty 4246xx | withdrawal | Cat:ID:None | 91.50 PLN | KONTO Komfort -> Cash account
+  Transfer | transfer | Cat:Transfer | 200.00 PLN | Cash account -> KONTO Komfort
+  Rozrywka LW BMG BACCARA podróże SPOLKA Jawczyce POL 2026-10- | withdrawal | Cat:Szpargały | 123.00 PLN | Millennium -> Cash account
+  Piekarnia | withdrawal | Cat:Spożywcze | 12.97 PLN | Millennium -> Cash account
+  GLOVO Płatność PIOTRKOWSKA BLIK 27.10.2026 LODZ Nr transakcj | withdrawal | Cat:Restauracja | 49.76 PLN | KONTO Komfort -> Cash account
+  Transfer | deposit | Cat:Transport | 0.50 PLN | Cash account -> Smart Saver
+  Transfer | transfer | Cat:Transfer | 0.50 PLN | ID:None -> Cash account
+  Rossmann | withdrawal | Cat:Chemia domowa | 26.56 PLN | Millennium -> Cash account
+  Spar | withdrawal | Cat:Spożywcze | 36.76 PLN | Millennium -> Cash account
+  Aqua | withdrawal | Cat:Kot | 59.98 PLN | Millennium -> Cash account
+  Lidl | withdrawal | Cat:Spożywcze | 14.28 PLN | Millennium -> Cash account
+  Spar | withdrawal | Cat:Spożywcze | 97.81 PLN | KONTO Komfort -> Cash account
+  Rossmann | withdrawal | Cat:Chemia domowa | 17.99 PLN | KONTO Komfort -> Cash account

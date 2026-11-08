@@ -1,0 +1,3 @@
+=== test_data/oplaty_bankowe_ocr.txt: 2 transactions ===
+  2026-10-29 | © Opłata mies. karta Visa Zbliż. za okres od 29.08 do 28.09 Finanse 3,89 PLN | withdrawal | Cat:Opłaty Bankowe | 10.00 PLN | KONTO Komfort -> Cash account
+  2026-10-29 | Opłata za prowadzenie rachunku Finanse 13,89 PLN | withdrawal | Cat:Opłaty Bankowe | 15.00 PLN | KONTO Komfort -> Cash account

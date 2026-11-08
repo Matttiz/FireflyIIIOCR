@@ -1,0 +1,5 @@
+=== test_data/rossmann.txt: 4 transactions ===
+  2026-10-31 | Rossmann | withdrawal | Cat:Chemia domowa | 14.36 PLN | Millennium -> Cash account
+  2026-10-28 | Rossmann | withdrawal | Cat:Chemia domowa | 59.28 PLN | KONTO Komfort -> Cash account
+  2026-10-26 | Rossmann | withdrawal | Cat:Chemia domowa | 26.56 PLN | Millennium -> Cash account
+  2026-10-26 | Rossmann | withdrawal | Cat:Chemia domowa | 17.99 PLN | KONTO Komfort -> Cash account

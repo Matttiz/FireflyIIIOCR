@@ -1,0 +1,2 @@
+=== test_data/sts_ocr.txt: 1 transactions ===
+  2026-10-31 | STS (transakcja 95301679260) | withdrawal | Cat:Hazard | 10.00 PLN | KONTO Direct -> Cash account
