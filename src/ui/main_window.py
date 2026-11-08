@@ -388,9 +388,9 @@ class MainWindow(QMainWindow):
     ):
         super().__init__()
         self.setWindowTitle("Firefly III — Clipboard")
-        # Start with 1.25 aspect ratio (1000x800) for optimal column proportions
-        initial_width = 1000
-        initial_height = 800
+        # Start with configured aspect ratio from WindowSettings
+        initial_width = WindowSettings.INITIAL_WIDTH
+        initial_height = WindowSettings.INITIAL_HEIGHT
         self.resize(initial_width, initial_height)
         logger.info(f"Window initialized: {initial_width}x{initial_height} (proportions: {initial_width/initial_height:.2f})")
 

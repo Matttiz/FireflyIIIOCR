@@ -94,8 +94,13 @@ class DataPathsSettings(BaseSettings):
     ENV_FILE: str = ".env"
 
 
-class FeatureFlags(BaseSettings):
-    """Feature flags - włącz/wyłącz funkcje."""
+class WindowSettings(BaseSettings):
+    """Ustawienia okna aplikacji."""
+
+    INITIAL_WIDTH: int = 1200
+    INITIAL_HEIGHT: int = 612  # 1.96 aspect ratio
+    MIN_WIDTH: int = 800
+    MIN_HEIGHT: int = 600
 
     USE_BLOCK_PARSER: bool = True
     ENABLE_TRANSFER_MERGE: bool = True

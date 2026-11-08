@@ -9,7 +9,7 @@ from src.api.firefly_client import FireflyApiClient, FireflyDataManager
 from src.ocr.ocr_processor import OcrProcessor
 from src.ocr.transaction_parser import TransactionParser
 from src.ui.main_window import MainWindow
-from src.config import get_settings
+from src.config import get_settings, WindowSettings
 
 
 # Konfiguracja logowania
@@ -25,6 +25,9 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# Window settings
+window_settings = WindowSettings()
 
 
 def load_env():
