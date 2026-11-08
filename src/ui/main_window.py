@@ -85,12 +85,12 @@ class TransactionTableView(QWidget):
         header = self.table.horizontalHeader()
         # Set column stretch factors (relative proportions)
         # Checkbox column is fixed width but resizable manually
-        stretch_factors = [0.3, 1.5, 2.0, 5.0, 1.5, 3.0, 4.0, 4.0]
+        stretch_factors = [0.3, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
         for i, factor in enumerate(stretch_factors):
             if i == 0:
                 # Checkbox column: fixed minimum but user can resize
                 header.setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
-                self.table.setColumnWidth(i, 30)
+                self.table.setColumnWidth(i, 38)
                 header.setMinimumSectionSize(20)
                 header.setMaximumSectionSize(50)
             else:
