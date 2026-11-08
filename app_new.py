@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QApplication
 
 from src.api.firefly_client import FireflyApiClient, FireflyDataManager
 from src.ocr.ocr_processor import OcrProcessor
-from src.ocr.transaction_parser import TransactionParser, update_accounts
+from src.ocr.transaction_parser import TransactionParser
 from src.ui.main_window import MainWindow
 
 
@@ -69,8 +69,7 @@ def main():
     )
 
     # Update parser with loaded accounts
-    update_accounts(
-        window.transaction_parser,
+    window.transaction_parser.update_accounts(
         window.accounts,
         window.default_destination_account_id
     )
