@@ -78,15 +78,19 @@ class TransactionTableView(QWidget):
             "✓", "Rodzaj", "Data", "Opis", "Kwota",
             "Kategoria", "Konto źródłowe", "Konto docelowe"
         ])
-        # Allow user to resize columns and auto-adjust to window size
+        # Auto-resize columns to fill available space proportionally
         header = self.table.horizontalHeader()
-        # Interactive allows user drag, StretchLastSection makes last column fill remaining space
+        # All columns resize interactively and maintain proportions
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        header.setStretchLastSection(True)
-        # Set minimum widths for readability
-        min_widths = [30, 70, 100, 200, 70, 120, 150, 150]
-        for col, width in enumerate(min_widths):
-            self.table.setColumnWidth(col, width)
+        # Set column stretch factors (relative proportions)
+        stretch_factors = [0.5, 1.5, 2.0, 5.0, 1.5, 3.0, 4.0, 4.0]  # Opis i konta mają największy udział
+        for i, factor in enumerate(stretch_factors):
+            header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
+        # Store initial stretch factors for restoration
+        self._column_stretch_factors = stretch_factors
+        self._column_manual_resize = [False] * 8
+        # Track manual column resize to disable stretch after user interaction
+        header.sectionResized.connect(self._on_column_resized)
         self.table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
         )
@@ -96,6 +100,14 @@ class TransactionTableView(QWidget):
 
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+    def _on_column_resized(self, logicalIndex: int, oldSize: int, newSize: int):
+        """Track manual column resize to maintain proportions only until user intervenes"""
+        if not self._column_manual_resize[logicalIndex]:
+            self._column_manual_resize[logicalIndex] = True
+            # Switch this column to Interactive mode to preserve manual resize
+            header = self.table.horizontalHeader()
+            header.setSectionResizeMode(logicalIndex, QHeaderView.ResizeMode.Interactive)
 
     def set_accounts_and_categories(self, accounts: List[Account], categories: List[Category]):
         self.accounts = accounts
