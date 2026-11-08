@@ -26,4 +26,7 @@ Thumbs.db
 # Data files (large JSON files)
 *.json
 !categories.json
-!transactions_last_year.jsontest_data/
+!transactions_last_year.json
+
+# Test data
+test_data/
