@@ -78,10 +78,13 @@ class TransactionTableView(QWidget):
             "✓", "Rodzaj", "Data", "Opis", "Kwota",
             "Kategoria", "Konto źródłowe", "Konto docelowe"
         ])
-        for col in range(8):
-            self.table.horizontalHeader().setSectionResizeMode(
-                col, QHeaderView.ResizeMode.Stretch
-            )
+        # Allow user to resize columns by dragging headers
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        # Set initial column widths
+        initial_widths = [30, 80, 120, 250, 80, 150, 200, 200]
+        for col, width in enumerate(initial_widths):
+            self.table.setColumnWidth(col, width)
         self.table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
         )
