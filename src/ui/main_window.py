@@ -72,6 +72,9 @@ class TransactionTableView(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Znalezione transakcje:"))
 
+        # Track window resize for column proportions
+        self._last_window_size = None
+
         self.table = QTableWidget()
         self.table.setColumnCount(8)
         self.table.setHorizontalHeaderLabels([
@@ -80,17 +83,20 @@ class TransactionTableView(QWidget):
         ])
         # Auto-resize columns to fill available space proportionally
         header = self.table.horizontalHeader()
-        # All columns resize interactively and maintain proportions
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         # Set column stretch factors (relative proportions)
-        stretch_factors = [0.5, 1.5, 2.0, 5.0, 1.5, 3.0, 4.0, 4.0]  # Opis i konta mają największy udział
+        # Checkbox column is fixed width but resizable manually
+        stretch_factors = [0.3, 1.5, 2.0, 5.0, 1.5, 3.0, 4.0, 4.0]
         for i, factor in enumerate(stretch_factors):
-            header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
-        # Store initial stretch factors for restoration
+            if i == 0:
+                # Checkbox column: fixed minimum but user can resize
+                header.setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
+                self.table.setColumnWidth(i, 30)
+                self.table.setColumnMinimumWidth(i, 20)
+                self.table.setColumnMaximumWidth(i, 50)
+            else:
+                header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
+        # Store initial stretch factors
         self._column_stretch_factors = stretch_factors
-        self._column_manual_resize = [False] * 8
-        # Track manual column resize to disable stretch after user interaction
-        header.sectionResized.connect(self._on_column_resized)
         self.table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
         )
@@ -101,13 +107,23 @@ class TransactionTableView(QWidget):
         layout.addWidget(self.table)
         self.setLayout(layout)
 
-    def _on_column_resized(self, logicalIndex: int, oldSize: int, newSize: int):
-        """Track manual column resize to maintain proportions only until user intervenes"""
-        if not self._column_manual_resize[logicalIndex]:
-            self._column_manual_resize[logicalIndex] = True
-            # Switch this column to Interactive mode to preserve manual resize
-            header = self.table.horizontalHeader()
-            header.setSectionResizeMode(logicalIndex, QHeaderView.ResizeMode.Interactive)
+    def resizeEvent(self, event):
+        """Log window resize events with column width proportions"""
+        super().resizeEvent(event)
+        # Log only significant resizes
+        current_size = (self.width(), self.height())
+        if self._last_window_size != current_size:
+            self._last_window_size = current_size
+            width, height = current_size
+            logger.info(f"TransactionTableView resized: {width}x{height} (aspect: {width/height:.2f})")
+            # Log column widths for debugging proportions
+            if self.table and self.table.columnCount() > 0:
+                col_widths = [self.table.columnWidth(i) for i in range(self.table.columnCount())]
+                total = sum(col_widths)
+                if total > 0:
+                    proportions = [f"{w/total*100:.1f}%" for w in col_widths]
+                    logger.info(f"  Column widths: {col_widths}")
+                    logger.info(f"  Column proportions: {proportions}")
 
     def set_accounts_and_categories(self, accounts: List[Account], categories: List[Category]):
         self.accounts = accounts
@@ -354,7 +370,11 @@ class MainWindow(QMainWindow):
     ):
         super().__init__()
         self.setWindowTitle("Firefly III — Clipboard")
-        self.resize(1000, 800)
+        # Start with 1.25 aspect ratio (1000x800) for optimal column proportions
+        initial_width = 1000
+        initial_height = 800
+        self.resize(initial_width, initial_height)
+        logger.info(f"Window initialized: {initial_width}x{initial_height} (proportions: {initial_width/initial_height:.2f})")
 
         self.api_client = api_client
         self.data_manager = data_manager
