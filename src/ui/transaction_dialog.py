@@ -3,11 +3,11 @@ from typing import List, Optional
 
 from PySide6.QtWidgets import (
     QDialog, QFormLayout, QComboBox, QLineEdit, QDateEdit,
-    QHBoxLayout, QPushButton, QVBoxLayout
-)
-from PySide6.QtCore import Qt
+    QHBoxLayout, QPushButton, QVBoxLayout)
+from PySide6.QtCore import Qt, QDate
 
 from src.model.transaction import Transaction, Account, Category
+import json
 
 
 class TransactionDialog(QDialog):
@@ -40,7 +40,6 @@ class TransactionDialog(QDialog):
         self.type_combo.addItem("Wypłata", "withdrawal")
         self.type_combo.addItem("Wpłata", "deposit")
         self.type_combo.addItem("Transfer", "transfer")
-
         idx = self.type_combo.findData(transaction.transaction_type)
         if idx >= 0:
             self.type_combo.setCurrentIndex(idx)
@@ -93,12 +92,21 @@ class TransactionDialog(QDialog):
         self.date_edit = QDateEdit()
         self.date_edit.setCalendarPopup(True)
         if isinstance(transaction.date, date):
-            self.date_edit.setDate(transaction.date)
+            self.date_edit.setDate(QDate(transaction.date))
         else:
-            self.date_edit.setDate(date.today())
+            self.date_edit.setDate(QDate.currentDate())
         layout.addRow("Data:", self.date_edit)
 
-        # Przyciski
+        # Data i czas (ISO) - wyliczona automatycznie
+        self.datetime_edit = QLineEdit()
+        self.datetime_edit.setReadOnly(True)
+        if transaction.datetime_str:
+            self.datetime_edit.setText(transaction.datetime_str)
+        else:
+            self.datetime_edit.setText("(będzie wyliczone przy utworzeniu)")
+        layout.addRow("Data i czas (ISO):", self.datetime_edit)
+
+        # Przyciska
         btn_layout = QHBoxLayout()
         ok_btn = QPushButton(ok_text)
         cancel_btn = QPushButton("Anuluj")
@@ -106,12 +114,34 @@ class TransactionDialog(QDialog):
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(ok_btn)
         btn_layout.addWidget(cancel_btn)
+        # Dodaj przycisk drukujący body requestu
+        print_btn = QPushButton("Pokaż body requestu")
+        print_btn.clicked.connect(self.print_request_body)
+        btn_layout.addWidget(print_btn)
 
         main_layout = QVBoxLayout()
         main_layout.addLayout(layout)
         main_layout.addLayout(btn_layout)
         self.setLayout(main_layout)
         self.resize(400, 350)
+
+    def print_request_body(self):
+        """Wyświetla body requestu w konsoli"""
+        # Use datetime_str if available (full ISO with time), otherwise use date + time
+        date_value = self.datetime_edit.text()
+        if date_value == "(będzie wyliczone przy utworzeniu)" or not date_value:
+            date_value = self.date_edit.date().toPython().isoformat()
+
+        body = {
+            "date": date_value,
+            "amount": float(self.amount_edit.text().replace(',', '.')),
+            "description": self.desc_edit.text().strip(),
+            "source_id": self.source_combo.currentData(),
+            "destination_id": self.dest_combo.currentData(),
+            "category_id": self.category_combo.currentData(),
+            "transaction_type": self.type_combo.currentData(),
+        }
+        print(f"Body requestu: {json.dumps(body, ensure_ascii=False, indent=2)}")
 
     def get_transaction(self) -> Transaction:
         """Zwraca zaktualizowaną transakcję"""
@@ -120,12 +150,18 @@ class TransactionDialog(QDialog):
         except:
             amount = 0.0
 
+        # toPython() returns datetime.date but mypy sees it as Any
+        selected_date = self.date_edit.date().toPython()
+        if not isinstance(selected_date, date):
+            selected_date = date.today()
+
         return Transaction(
-            date=self.date_edit.date().toPython(),
+            date=selected_date,
             amount=amount,
             description=self.desc_edit.text().strip(),
             source_id=self.source_combo.currentData(),
             destination_id=self.dest_combo.currentData(),
             category_id=self.category_combo.currentData(),
             transaction_type=self.type_combo.currentData(),
+            datetime_str=self.datetime_edit.text() if self.datetime_edit.text() != "(będzie wyliczone przy utworzeniu)" else "",
         )

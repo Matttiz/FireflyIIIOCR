@@ -16,6 +16,7 @@ class Transaction:
     raw_line: str = ""
     exists: bool = False
     status: str = ""
+    datetime_str: str = ""
 
     def is_valid(self) -> bool:
         return bool(
@@ -27,7 +28,7 @@ class Transaction:
         )
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             'date': self.date,
             'amount': self.amount,
             'description': self.description,
@@ -38,6 +39,9 @@ class Transaction:
             'transaction_type': self.transaction_type,
             'raw_line': self.raw_line,
         }
+        if self.datetime_str:
+            d['datetime_str'] = self.datetime_str
+        return d
 
 
 @dataclass

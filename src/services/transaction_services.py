@@ -14,6 +14,9 @@ class TransactionMatcher:
         """Sprawdza czy transakcja już istnieje (tolerancja 1 dzień, 0.01 PLN)"""
         from datetime import datetime, date
 
+        trans_desc = transaction['description'].lower().strip()
+        trans_date = transaction['date'] if isinstance(transaction['date'], date) else transaction['date']
+
         for existing in self.existing_transactions:
             if not existing.get('date'):
                 continue
@@ -21,16 +24,26 @@ class TransactionMatcher:
                 existing_date = datetime.fromisoformat(
                     existing['date'].replace('Z', '+00:00')
                 ).date()
-                trans_date = transaction['date'] if isinstance(transaction['date'], date) else transaction['date']
+                existing_desc = existing['description'].lower().strip()
 
                 date_diff = abs((existing_date - trans_date).days)
                 amount_diff = abs(existing['amount'] - transaction['amount'])
-                desc_similar = (
-                    transaction['description'].lower() in existing['description'].lower() or
-                    existing['description'].lower() in transaction['description'].lower()
+
+                # Stricter description matching:
+                # 1. Exact match (after stripping)
+                # 2. Or one contains the other AND the shorter one is at least 8 chars
+                #    AND the shorter description makes up at least 50% of the longer
+                #    (avoids matching "Rossmann" against "Rossmann Płatność kartą...")
+                desc_exact = trans_desc == existing_desc
+                shorter = trans_desc if len(trans_desc) < len(existing_desc) else existing_desc
+                longer = existing_desc if len(trans_desc) < len(existing_desc) else trans_desc
+                desc_contains = (
+                    shorter in longer
+                    and len(shorter) >= 8
+                    and len(shorter) / len(longer) >= 0.5
                 )
 
-                if date_diff <= 1 and amount_diff < 0.01 and desc_similar:
+                if date_diff <= 1 and amount_diff < 0.01 and (desc_exact or desc_contains):
                     return True
             except Exception:
                 continue

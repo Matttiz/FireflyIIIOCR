@@ -1,12 +1,15 @@
 import hashlib
-from datetime import date
+import logging
+from datetime import date, datetime
 from pathlib import Path
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 from PySide6.QtCore import (
     QByteArray, QBuffer, QIODevice, Qt, Signal, QObject
 )
-from PySide6.QtGui import QGuiApplication, QPixmap
+from PySide6.QtGui import QGuiApplication, QPixmap, QColor
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTextEdit, QComboBox, QMessageBox,
@@ -73,7 +76,7 @@ class TransactionTableView(QWidget):
         self.table.setColumnCount(8)
         self.table.setHorizontalHeaderLabels([
             "✓", "Rodzaj", "Data", "Opis", "Kwota",
-            "Konto źródłowe", "Konto docelowe", "Kategoria"
+            "Kategoria", "Konto źródłowe", "Konto docelowe"
         ])
         for col in range(8):
             self.table.horizontalHeader().setSectionResizeMode(
@@ -92,6 +95,90 @@ class TransactionTableView(QWidget):
     def set_accounts_and_categories(self, accounts: List[Account], categories: List[Category]):
         self.accounts = accounts
         self.categories = categories
+
+    def print_transactions_console(self, transactions: List[Transaction]):
+        """Wypisuje transakcje w konsoli w formacie tabeli takim jak w GUI."""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        if not transactions:
+            logger.info("Brak transakcji do wyświetlenia")
+            return
+
+        # Nagłówki kolumn
+        headers = ["✓", "Rodzaj", "Data", "Opis", "Kwota", "Kategoria", "Konto źródłowe", "Konto docelowe"]
+
+        # Pobierz nazwy kont i kategorii
+        def get_cat_name(cat_id):
+            if not self.categories or cat_id is None:
+                return "Nieznana"
+            cat_id_str = str(cat_id)
+            for cat in self.categories:
+                c_id = cat.get('id') if isinstance(cat, dict) else cat.id
+                if c_id is not None and str(c_id) == cat_id_str:
+                    return cat.get('name', 'Nieznana') if isinstance(cat, dict) else cat.name
+            return "Nieznana"
+
+        def get_acc_name(acc_id):
+            if not self.accounts or acc_id is None:
+                return "Nieznane"
+            acc_id_str = str(acc_id)
+            for acc in self.accounts:
+                a_id = acc.get('id') if isinstance(acc, dict) else acc.id
+                if a_id is not None and str(a_id) == acc_id_str:
+                    return acc.get('name', 'Nieznane') if isinstance(acc, dict) else acc.name
+            return "Nieznane"
+
+        type_map = {
+            'withdrawal': 'Wypłata',
+            'deposit': 'Wpłata',
+            'transfer': 'Transfer'
+        }
+
+        # Przygotuj wiersze
+        rows = []
+        for trans in transactions:
+            type_name = type_map.get(trans.transaction_type, trans.transaction_type.capitalize())
+            if trans.datetime_str:
+                try:
+                    dt = datetime.fromisoformat(trans.datetime_str.replace('Z', '+00:00'))
+                    date_str = dt.strftime('%Y-%m-%d %H:%M')
+                except:
+                    date_str = trans.datetime_str[:16].replace('T', ' ')
+            else:
+                date_str = trans.date.strftime('%Y-%m-%d') if isinstance(trans.date, date) else str(trans.date)
+            amount_str = f"{trans.amount:.2f}"
+            cat_name = get_cat_name(trans.category_id)
+            source_name = get_acc_name(trans.source_id)
+            dest_name = get_acc_name(trans.destination_id)
+
+            # Skróć opis jeśli za długi
+            desc = trans.description
+            if len(desc) > 50:
+                desc = desc[:47] + "..."
+
+            checkbox = "☑" if not trans.exists else "☐"
+
+            rows.append([checkbox, type_name, date_str, desc, amount_str, cat_name, source_name, dest_name])
+
+        # Oblicz szerokości kolumn
+        col_widths = [len(h) for h in headers]
+        for row in rows:
+            for i, cell in enumerate(row):
+                col_widths[i] = max(col_widths[i], len(str(cell)))
+
+        # Drukuj nagłówek
+        header_line = " | ".join(f"{headers[i]:<{col_widths[i]}}" for i in range(len(headers)))
+        separator = "-+-".join("-" * w for w in col_widths)
+
+        logger.info(f"\n{header_line}")
+        logger.info(separator)
+
+        for row in rows:
+            line = " | ".join(f"{str(row[i]):<{col_widths[i]}}" for i in range(len(row)))
+            logger.info(line)
+
+        logger.info(f"\nŁącznie transakcji: {len(rows)}")
 
     def display_transactions(self, transactions: List[Transaction]):
         self.transactions = transactions
@@ -114,8 +201,16 @@ class TransactionTableView(QWidget):
             type_name = type_map.get(trans.transaction_type, trans.transaction_type.capitalize())
             self.table.setItem(i, 1, QTableWidgetItem(type_name))
 
-            # Data
-            date_str = trans.date.strftime('%Y-%m-%d') if isinstance(trans.date, date) else str(trans.date)
+            # Data - show with time if datetime_str is available
+            if trans.datetime_str:
+                # Extract date and HH:MM from ISO format "2026-10-27T07:21:57+01:00"
+                try:
+                    dt = datetime.fromisoformat(trans.datetime_str.replace('Z', '+00:00'))
+                    date_str = dt.strftime('%Y-%m-%d %H:%M')
+                except:
+                    date_str = trans.datetime_str[:16].replace('T', ' ')
+            else:
+                date_str = trans.date.strftime('%Y-%m-%d') if isinstance(trans.date, date) else str(trans.date)
             self.table.setItem(i, 2, QTableWidgetItem(date_str))
 
             # Opis
@@ -124,36 +219,96 @@ class TransactionTableView(QWidget):
             # Kwota
             self.table.setItem(i, 4, QTableWidgetItem(f"{trans.amount:.2f}"))
 
-            # Konto źródłowe
-            source_name = "Nieznane"
-            for acc in self.accounts:
-                if acc.id == trans.source_id:
-                    source_name = acc.name
-                    break
-            self.table.setItem(i, 5, QTableWidgetItem(source_name))
-
-            # Konto docelowe
-            dest_name = "Cash account"
-            for acc in self.accounts:
-                if acc.id == trans.destination_id:
-                    dest_name = acc.name
-                    break
-            self.table.setItem(i, 6, QTableWidgetItem(dest_name))
-
             # Kategoria
             cat_name = "Nieznana"
-            for cat in self.categories:
-                if cat.id == trans.category_id:
-                    cat_name = cat.name
-                    break
-            self.table.setItem(i, 7, QTableWidgetItem(cat_name))
+            if self.categories:
+                # Szukaj kategorii po ID - obsługujemy słowniki z API {'id': int/str, 'name': str}
+                # oraz obiekty z atrybutem .id (np. Category dataclass)
+                # Porównujemy jako stringi, bo API może zwracać ID jako string
+                trans_cat_id_str = str(trans.category_id) if trans.category_id is not None else None
+                cat_match = None
+                for cat in self.categories:
+                    cat_id = cat.get('id') if isinstance(cat, dict) else cat.id
+                    if cat_id is not None and str(cat_id) == trans_cat_id_str:
+                        cat_match = cat
+                        break
+                if cat_match:
+                    cat_name = cat_match.get('name', 'Nieznana') if isinstance(cat_match, dict) else cat_match.name
+            self.table.setItem(i, 5, QTableWidgetItem(cat_name))
 
-            # Kolor dla istniejących
+            # Konto źródłowe
+            source_name = "Nieznane"
+            if self.accounts:
+                # PRIORYTET 1: Szukaj po source_id - to jest zawsze poprawne źródło
+                trans_source_id_str = str(trans.source_id) if trans.source_id is not None else None
+                acc_match = None
+                if trans_source_id_str:
+                    for acc in self.accounts:
+                        acc_id = acc.get('id') if isinstance(acc, dict) else acc.id
+                        if acc_id is not None and str(acc_id) == trans_source_id_str:
+                            acc_match = acc
+                            break
+                if acc_match:
+                    source_name = acc_match.get('name', 'Nieznane') if isinstance(acc_match, dict) else acc_match.name
+                else:
+                    logger.debug(f"Source account not found for trans.source_id={trans.source_id}, account_name={trans.account_name}. Available accounts: {[(a.get('id'), a.get('name')) for a in self.accounts if isinstance(a, dict)]}")
+            self.table.setItem(i, 6, QTableWidgetItem(source_name))
+
+            # Konto docelowe
+            dest_name = "Nieznane"
+            if self.accounts:
+                # PRIORYTET 1: Szukaj po destination_id - to jest zawsze poprawne docelowe
+                trans_dest_id_str = str(trans.destination_id) if trans.destination_id is not None else None
+                acc_match = None
+                if trans_dest_id_str:
+                    for acc in self.accounts:
+                        acc_id = acc.get('id') if isinstance(acc, dict) else acc.id
+                        if acc_id is not None and str(acc_id) == trans_dest_id_str:
+                            acc_match = acc
+                            break
+                if acc_match:
+                    dest_name = acc_match.get('name', 'Nieznane') if isinstance(acc_match, dict) else acc_match.name
+                else:
+                    # Fallback: jeśli brak ID, spróbuj domyślny Cash account dla withdrawals
+                    if trans.transaction_type == 'withdrawal':
+                        for acc in self.accounts:
+                            acc_name = acc.get('name', '') if isinstance(acc, dict) else acc.name
+                            if acc_name and ('cash' in acc_name.lower() or 'gotówka' in acc_name.lower() or 'gotowka' in acc_name.lower()):
+                                dest_name = acc_name
+                                break
+                        if dest_name == "Nieznane":
+                            dest_name = "Cash account"
+                    else:
+                        logger.debug(f"Dest account not found for trans.destination_id={trans.destination_id}. Available accounts: {[(a.get('id'), a.get('name')) for a in self.accounts if isinstance(a, dict)]}")
+            self.table.setItem(i, 7, QTableWidgetItem(dest_name))
+
+            # Kolorowanie wierszy w zależności od typu transakcji i parzystości
+            # Indeks 0 = pierwszy wiersz = nieparzysty (1. wiersz) -> jasne/pastelowe kolory
+            # Indeks 1 = drugi wiersz = parzysty (2. wiersz) -> nieco ciemniejsze kolory
+            is_odd = (i % 2 == 0)  # True dla nieparzystych (1., 3., 5...)
+
+            # Definicja kolorów - pastelowe warianty (lżejsze od standardowych)
+            if trans.transaction_type == 'transfer':
+                # Transfer - pastelowy niebieski (light blue)
+                bg_color = QColor(173, 216, 230) if is_odd else QColor(135, 206, 235)  # lightblue / skyblue
+            elif trans.transaction_type == 'withdrawal':
+                # Wypłata - pastelowy czerwony (light coral / salmon)
+                bg_color = QColor(255, 160, 122) if is_odd else QColor(240, 128, 128)  # lightsalmon / lightcoral
+            elif trans.transaction_type == 'deposit':
+                # Wpływ - pastelowy zielony (light green)
+                bg_color = QColor(144, 238, 144) if is_odd else QColor(152, 251, 152)  # lightgreen / palegreen
+            else:
+                bg_color = None
+
+            # Kolor dla istniejących transakcji (nadrzędny - szary)
             if trans.exists:
+                bg_color = QColor(211, 211, 211)  # lightGray
+
+            if bg_color:
                 for col in range(8):
                     item = self.table.item(i, col)
                     if item:
-                        item.setBackground(Qt.GlobalColor.lightGray)
+                        item.setBackground(bg_color)
 
     def get_checked_transactions(self) -> List[Transaction]:
         """Zwraca zaznaczone transakcje które nie istnieją"""
@@ -167,26 +322,7 @@ class TransactionTableView(QWidget):
         return result
 
 
-class OcrSettingsWidget(QWidget):
-    """Widget wyboru trybu OCR - zablokowany: tylko PSM 12"""
-
-    def __init__(self):
-        super().__init__()
-        layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        self.psm_combo = QComboBox()
-        self.psm_combo.addItem("PSM 12 - Pojedyncza linia")
-        self.psm_combo.setCurrentText("PSM 12 - Pojedyncza linia")
-        self.psm_combo.setEnabled(False)  # Zablokowany - tylko PSM 12
-        self.psm_combo.setToolTip("Domyślny tryb Tesseract (tylko PSM 12)")
-
-        layout.addWidget(QLabel("Tryb OCR:"))
-        layout.addWidget(self.psm_combo)
-        self.setLayout(layout)
-
-    def get_psm(self) -> int:
-        return 12  # Always return 12 since mode is fixed
+# OcrSettingsWidget removed - PSM 12 is fixed, no UI needed
 
 
 class MainWindow(QMainWindow):
@@ -212,6 +348,9 @@ class MainWindow(QMainWindow):
         self.transactions = data_manager.load_transactions()
         self.categories = data_manager.load_categories()
         self.accounts = api_client.load_accounts()
+
+        # Załaduj transakcje do cache dla get_last_transaction_for_account
+        api_client.load_transactions_into_cache(data_manager.data_dir)
 
         # Znajdź Cash account jako domyślne
         self.default_destination_account_id = 5
@@ -240,9 +379,6 @@ class MainWindow(QMainWindow):
 
         self.status = QLabel("Oczekiwanie na obraz…")
 
-        # OCR settings
-        self.ocr_settings = OcrSettingsWidget()
-
         # Buttons
         self.ocr_button = QPushButton("Rozpoznaj tekst (OCR)")
         self.ocr_button.setEnabled(False)
@@ -252,7 +388,6 @@ class MainWindow(QMainWindow):
         self.create_button.setEnabled(False)
 
         button_layout = QHBoxLayout()
-        button_layout.addWidget(self.ocr_settings)
         button_layout.addWidget(self.ocr_button)
         button_layout.addWidget(self.analyze_button)
         button_layout.addWidget(self.create_button)
@@ -304,6 +439,7 @@ class MainWindow(QMainWindow):
         self.analyze_button.clicked.connect(self.analyze_transactions)
         self.create_button.clicked.connect(self.create_selected_transactions)
         self.table_view.transaction_double_clicked.connect(self.edit_transaction)
+        self.text_edit.textChanged.connect(self._on_text_changed)
 
     def on_image_changed(self, image_bytes: bytes):
         self.image_bytes = image_bytes
@@ -318,6 +454,11 @@ class MainWindow(QMainWindow):
         self.text_edit.clear()
         self.parsed_transactions = []
         self.table_view.display_transactions([])
+
+    def _on_text_changed(self):
+        text = self.text_edit.toPlainText().strip()
+        has_content = bool(text)
+        self.analyze_button.setEnabled(has_content)
 
     def show_image(self):
         if not self.image_bytes:
@@ -410,9 +551,27 @@ class MainWindow(QMainWindow):
                 if not trans.transaction_type:
                     trans.transaction_type = 'withdrawal'
 
+                # Calculate datetime_str for new transactions using smart time logic
+                if trans.transaction_type in ('withdrawal', 'transfer'):
+                    account_id = trans.source_id
+                else:
+                    account_id = trans.destination_id
+
+                if account_id:
+                    dt = self.api_client.get_next_transaction_time(account_id, trans.date, self.data_manager.data_dir)
+                    # Ensure timezone offset is present (use +01:00 for Poland)
+                    if dt.tzinfo is None:
+                        # No timezone info, assume CET/CEST (+01:00 or +02:00)
+                        # For simplicity, use +01:00
+                        dt_str = dt.strftime('%Y-%m-%dT%H:%M:%S+01:00')
+                    else:
+                        dt_str = dt.isoformat()
+                    trans.datetime_str = dt_str
+
             self.parsed_transactions.append(trans)
 
         self.table_view.display_transactions(self.parsed_transactions)
+        self.table_view.print_transactions_console(self.parsed_transactions)
         self.status.setText(f"Znaleziono {len(self.parsed_transactions)} transakcji")
         self.create_button.setEnabled(True)
 
@@ -473,7 +632,15 @@ class MainWindow(QMainWindow):
 
         created = 0
         for trans in transactions_to_create:
-            if self.api_client.create_transaction(trans.to_dict()):
+            # Pass account_id for smart datetime calculation
+            # For withdrawal/transfer: use source_id
+            # For deposit: use destination_id
+            if trans.transaction_type in ('withdrawal', 'transfer'):
+                account_id = trans.source_id
+            else:
+                account_id = trans.destination_id
+
+            if self.api_client.create_transaction(trans.to_dict(), account_id=account_id):
                 created += 1
 
         QMessageBox.information(
