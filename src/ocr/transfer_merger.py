@@ -236,11 +236,13 @@ class TransferMerger:
         # SmartSaver account ID is typically 38 (hardcoded in original, but should be from config)
         is_smartsaver = (str(source_id) == '38' or str(dest_id) == '38')
         category_id = self.cat.SMART_SAVER if is_smartsaver else self.cat.TRANSFER
+        # Opis: "Smart Saver" dla transferów na/ze Smart Savera, inaczej "Transfer"
+        description = "Smart Saver" if is_smartsaver else "Transfer"
 
         return Transaction(
             date=tx1.date,
             amount=tx1.amount,
-            description="Transfer",
+            description=description,
             account_name=source_name,
             source_id=source_id,
             destination_id=dest_id,

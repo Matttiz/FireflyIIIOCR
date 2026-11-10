@@ -97,10 +97,10 @@ class DataPathsSettings(BaseSettings):
 class WindowSettings(BaseSettings):
     """Ustawienia okna aplikacji."""
 
-    INITIAL_WIDTH: int = 1200
-    INITIAL_HEIGHT: int = 612  # 1.96 aspect ratio
+    INITIAL_WIDTH: int = 1040
+    INITIAL_HEIGHT: int = 400  # 2.60 aspect ratio (1040/400 = 2.6)
     MIN_WIDTH: int = 800
-    MIN_HEIGHT: int = 600
+    MIN_HEIGHT: int = 300
 
 
 class FeatureFlags(BaseSettings):
