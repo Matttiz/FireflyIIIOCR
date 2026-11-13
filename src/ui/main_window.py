@@ -420,6 +420,13 @@ class MainWindow(QMainWindow):
         # Załaduj transakcje do cache dla get_last_transaction_for_account
         api_client.load_transactions_into_cache(data_manager.data_dir)
 
+        # Pobierz i zaloguj najnowszą transakcję z Firefly przy starcie
+        latest_global = api_client.get_global_latest_transaction_time(data_manager.data_dir)
+        if latest_global:
+            logger.info(f"Startup: Latest global transaction from Firefly: {latest_global.isoformat()}")
+        else:
+            logger.info("Startup: No existing transactions in Firefly cache")
+
         # Znajdź Cash account jako domyślne
         self.default_destination_account_id = 5
         for acc in self.accounts:
