@@ -19,46 +19,11 @@ class FireflyApiClient:
             "Accept": "application/json",
         }
         self._call_counter: Dict[str, int] = {}  # Licznik wywołań dla każdego konta/daty
-        self._transactions_cache: Optional[List[Dict[str, Any]]] = None  # Cache transakcji z pliku lokalnego
-        self._cache_loaded = False
+        self._transactions_cache: List[Dict[str, Any]] = []  # In-memory cache transakcji
 
         # Settings
         settings = get_settings()
         self.timing = settings.timing
-
-    def load_transactions_into_cache(self, data_dir: Path) -> None:
-        """Ładuje transakcje z pliku JSON do cache (raz na sesję)"""
-        if self._cache_loaded:
-            return
-        try:
-            transactions_file = data_dir / "transactions_last_year.json"
-            if transactions_file.exists():
-                import json
-                with open(transactions_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    self._transactions_cache = []
-                    for item in data.get('data', []):
-                        attrs = item.get('attributes', {})
-                        for trans in attrs.get('transactions', []):
-                            self._transactions_cache.append({
-                                'id': item.get('id'),
-                                'date': trans.get('date', ''),
-                                'description': trans.get('description', ''),
-                                'amount': float(trans.get('amount', 0)),
-                                'source_id': trans.get('source_id'),
-                                'source_name': trans.get('source_name', ''),
-                                'destination_id': trans.get('destination_id'),
-                                'destination_name': trans.get('destination_name', ''),
-                                'category_id': trans.get('category_id'),
-                                'category_name': trans.get('category_name', ''),
-                                'type': trans.get('type', ''),
-                            })
-                logger.info(f"Załadowano {len(self._transactions_cache)} transakcji do cache")
-        except Exception as e:
-            logger.error(f"Błąd ładowania transakcji do cache: {e}")
-            self._transactions_cache = []
-        finally:
-            self._cache_loaded = True
 
     def refresh_transactions_from_api(self, limit: int = 500, start_date: Optional[date] = None) -> int:
         """
@@ -106,22 +71,13 @@ class FireflyApiClient:
                             'type': trans.get('type', ''),
                         })
 
-                # Merge with existing cache (avoid duplicates by id+date)
-                existing_keys = set()
-                if self._transactions_cache:
-                    for t in self._transactions_cache:
-                        key = f"{t.get('id')}_{t.get('date')}"
-                        existing_keys.add(key)
-
-                for t in new_cache:
-                    key = f"{t.get('id')}_{t.get('date')}"
-                    if key not in existing_keys:
-                        self._transactions_cache.append(t)
+                # Replace cache with fresh data from API (no local file merge)
+                self._transactions_cache = new_cache
 
                 # Sort by date descending (newest first)
                 self._transactions_cache.sort(key=lambda x: x.get('date', ''), reverse=True)
 
-                logger.info(f"Pobrano {len(new_cache)} transakcji z Firefly API, cache: {len(self._transactions_cache)}")
+                logger.info(f"Pobrano {len(new_cache)} transakcji z Firefly API")
                 return len(new_cache)
             else:
                 logger.error(f"Błąd pobierania transakcji z API: {response.status_code} - {response.text}")
@@ -157,14 +113,10 @@ class FireflyApiClient:
 
     def get_last_transaction_for_account(self, account_id: int, target_date: Optional[date] = None, data_dir: Optional[Path] = None) -> Optional[datetime]:
         """
-        Pobiera ostatnią transakcję dla danego konta z cache (plik lokalny).
+        Pobiera ostatnią transakcję dla danego konta z cache (pamięć).
         Jeśli target_date jest podane, szuka transakcji z tego dnia.
         Zwraca datetime ostatniej transakcji lub None.
         """
-        # Upewnij się, że cache jest załadowany
-        if data_dir and not self._cache_loaded:
-            self.load_transactions_into_cache(data_dir)
-
         if not self._transactions_cache:
             return None
 
@@ -192,10 +144,6 @@ class FireflyApiClient:
         Pobiera bezwzględnie najnowszą transakcję ze wszystkich kont z cache.
         Zwraca datetime najnowszej transakcji lub None.
         """
-        # Upewnij się, że cache jest załadowany
-        if data_dir and not self._cache_loaded:
-            self.load_transactions_into_cache(data_dir)
-
         if not self._transactions_cache:
             return None
 
