@@ -635,53 +635,51 @@ class MainWindow(QMainWindow):
         # Now assign datetime_str to new transactions with proper chronological order
         # OCR transactions are from top (newest) to bottom (oldest)
         # We need to process from bottom (oldest) to top (newest)
-        # Group by account_id and date
-        from collections import defaultdict
-        account_date_groups: dict[tuple[int, date], list[tuple[int, Transaction]]] = defaultdict(list)
-
+        # Get all non-existing transactions, sorted bottom-to-top
+        new_transactions = []
         for idx, trans in enumerate(self.parsed_transactions):
             if trans.exists:
                 continue
+            new_transactions.append((idx, trans))
+
+        # Sort by index descending (bottom to top = oldest to newest in OCR)
+        new_transactions.sort(key=lambda x: -x[0])
+
+        # Process each transaction chronologically
+        for idx, trans in new_transactions:
+            # Determine account_id based on transaction type
             if trans.transaction_type in ('withdrawal', 'transfer'):
                 account_id = trans.source_id
             else:
                 account_id = trans.destination_id
-            if account_id and trans.date:
-                account_date_groups[(account_id, trans.date)].append((idx, trans))
 
-        # For each group, process from bottom (last in list = oldest) to top
-        for (account_id, trans_date), transactions in account_date_groups.items():
-            # Sort by index descending (bottom to top = oldest to newest in OCR)
-            transactions.sort(key=lambda x: -x[0])
+            if not account_id or not trans.date:
+                continue
 
             # Get last existing transaction from Firefly for this account/date
             last_existing = self.api_client.get_last_transaction_for_account(
-                account_id, trans_date, self.data_manager.data_dir
+                account_id, trans.date, self.data_manager.data_dir
             )
 
             interval_minutes = self.api_client.timing.TRANSACTION_INTERVAL_MINUTES
             current_time = last_existing
 
-            for idx, trans in transactions:
-                if current_time is None or current_time.date() != trans_date:
-                    # No existing transaction this day - start at FIRST_TRANSACTION_HOUR
-                    current_time = datetime.combine(
-                        trans_date,
-                        datetime.min.time().replace(hour=self.api_client.timing.FIRST_TRANSACTION_HOUR, minute=0, second=0)
-                    )
-                else:
-                    # Add interval from last existing transaction
-                    current_time = current_time + timedelta(minutes=interval_minutes)
-
-                # Ensure timezone offset
-                if current_time.tzinfo is None:
-                    dt_str = current_time.strftime('%Y-%m-%dT%H:%M:%S+01:00')
-                else:
-                    dt_str = current_time.isoformat()
-                trans.datetime_str = dt_str
-
-                # Update current_time for next transaction (going up in OCR = newer)
+            if current_time is None or current_time.date() != trans.date:
+                # No existing transaction this day - start at FIRST_TRANSACTION_HOUR
+                current_time = datetime.combine(
+                    trans.date,
+                    datetime.min.time().replace(hour=self.api_client.timing.FIRST_TRANSACTION_HOUR, minute=0, second=0)
+                )
+            else:
+                # Add interval from last existing transaction
                 current_time = current_time + timedelta(minutes=interval_minutes)
+
+            # Ensure timezone offset
+            if current_time.tzinfo is None:
+                dt_str = current_time.strftime('%Y-%m-%dT%H:%M:%S+01:00')
+            else:
+                dt_str = current_time.isoformat()
+            trans.datetime_str = dt_str
 
         self.table_view.display_transactions(self.parsed_transactions)
         self.table_view.print_transactions_console(self.parsed_transactions)
