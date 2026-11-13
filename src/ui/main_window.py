@@ -417,8 +417,12 @@ class MainWindow(QMainWindow):
         self.categories = data_manager.load_categories()
         self.accounts = api_client.load_accounts()
 
-        # Załaduj transakcje do cache dla get_last_transaction_for_account
+        # Załaduj transakcje do cache i pobierz najnowsze z API
         api_client.load_transactions_into_cache(data_manager.data_dir)
+        # Pobierz najnowsze transakcje z Firefly API (ostatnie 500)
+        count = api_client.refresh_transactions_from_api(limit=500)
+        if count > 0:
+            logger.info(f"Startup: Refreshed {count} transactions from Firefly API")
 
         # Pobierz i zaloguj najnowszą transakcję z Firefly przy starcie
         latest_global = api_client.get_global_latest_transaction_time(data_manager.data_dir)

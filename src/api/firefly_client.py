@@ -60,6 +60,76 @@ class FireflyApiClient:
         finally:
             self._cache_loaded = True
 
+    def refresh_transactions_from_api(self, limit: int = 500, start_date: Optional[date] = None) -> int:
+        """
+        Pobiera najnowsze transakcje z Firefly API i aktualizuje cache.
+
+        Args:
+            limit: Maksymalna liczba transakcji do pobrania
+            start_date: Opcjonalna data od której pobierać transakcje
+
+        Returns:
+            Liczba pobranych transakcji
+        """
+        try:
+            params = {
+                'limit': limit,
+                'order': 'desc'  # Najnowsze pierwsze
+            }
+            if start_date:
+                params['start'] = start_date.isoformat()
+
+            response = requests.get(
+                f"{self.api_base}/transactions",
+                headers=self.headers,
+                params=params,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                new_cache = []
+                for item in data.get('data', []):
+                    attrs = item.get('attributes', {})
+                    for trans in attrs.get('transactions', []):
+                        new_cache.append({
+                            'id': item.get('id'),
+                            'date': trans.get('date', ''),
+                            'description': trans.get('description', ''),
+                            'amount': float(trans.get('amount', 0)),
+                            'source_id': trans.get('source_id'),
+                            'source_name': trans.get('source_name', ''),
+                            'destination_id': trans.get('destination_id'),
+                            'destination_name': trans.get('destination_name', ''),
+                            'category_id': trans.get('category_id'),
+                            'category_name': trans.get('category_name', ''),
+                            'type': trans.get('type', ''),
+                        })
+
+                # Merge with existing cache (avoid duplicates by id+date)
+                existing_keys = set()
+                if self._transactions_cache:
+                    for t in self._transactions_cache:
+                        key = f"{t.get('id')}_{t.get('date')}"
+                        existing_keys.add(key)
+
+                for t in new_cache:
+                    key = f"{t.get('id')}_{t.get('date')}"
+                    if key not in existing_keys:
+                        self._transactions_cache.append(t)
+
+                # Sort by date descending (newest first)
+                self._transactions_cache.sort(key=lambda x: x.get('date', ''), reverse=True)
+
+                logger.info(f"Pobrano {len(new_cache)} transakcji z Firefly API, cache: {len(self._transactions_cache)}")
+                return len(new_cache)
+            else:
+                logger.error(f"Błąd pobierania transakcji z API: {response.status_code} - {response.text}")
+                return 0
+        except Exception as e:
+            logger.error(f"Błąd pobierania transakcji z API: {e}")
+            return 0
+
     def load_accounts(self) -> List[Dict[str, Any]]:
         """Pobiera listę kont z Firefly API"""
         try:
