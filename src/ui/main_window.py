@@ -569,7 +569,10 @@ class MainWindow(QMainWindow):
         self.status.setText("Rozpoczynam OCR...")
         QApplication.processEvents()
 
-        psm = self.ocr_settings.get_psm()
+        # Get PSM from config (default 12)
+        from src.config import get_settings
+        settings = get_settings()
+        psm = settings.ocr.DEFAULT_PSM
         lines = self.ocr_processor.process_image(self.image_bytes, psm)
 
         self.text_edit.setPlainText("\n".join(lines))
