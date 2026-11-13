@@ -1,6 +1,6 @@
 import hashlib
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
 
@@ -630,24 +630,58 @@ class MainWindow(QMainWindow):
                 if not trans.transaction_type:
                     trans.transaction_type = 'withdrawal'
 
-                # Calculate datetime_str for new transactions using smart time logic
-                if trans.transaction_type in ('withdrawal', 'transfer'):
-                    account_id = trans.source_id
-                else:
-                    account_id = trans.destination_id
-
-                if account_id:
-                    dt = self.api_client.get_next_transaction_time(account_id, trans.date, self.data_manager.data_dir)
-                    # Ensure timezone offset is present (use +01:00 for Poland)
-                    if dt.tzinfo is None:
-                        # No timezone info, assume CET/CEST (+01:00 or +02:00)
-                        # For simplicity, use +01:00
-                        dt_str = dt.strftime('%Y-%m-%dT%H:%M:%S+01:00')
-                    else:
-                        dt_str = dt.isoformat()
-                    trans.datetime_str = dt_str
-
             self.parsed_transactions.append(trans)
+
+        # Now assign datetime_str to new transactions with proper chronological order
+        # OCR transactions are from top (newest) to bottom (oldest)
+        # We need to process from bottom (oldest) to top (newest)
+        # Group by account_id and date
+        from collections import defaultdict
+        account_date_groups: dict[tuple[int, date], list[tuple[int, Transaction]]] = defaultdict(list)
+
+        for idx, trans in enumerate(self.parsed_transactions):
+            if trans.exists:
+                continue
+            if trans.transaction_type in ('withdrawal', 'transfer'):
+                account_id = trans.source_id
+            else:
+                account_id = trans.destination_id
+            if account_id and trans.date:
+                account_date_groups[(account_id, trans.date)].append((idx, trans))
+
+        # For each group, process from bottom (last in list = oldest) to top
+        for (account_id, trans_date), transactions in account_date_groups.items():
+            # Sort by index descending (bottom to top = oldest to newest in OCR)
+            transactions.sort(key=lambda x: -x[0])
+
+            # Get last existing transaction from Firefly for this account/date
+            last_existing = self.api_client.get_last_transaction_for_account(
+                account_id, trans_date, self.data_manager.data_dir
+            )
+
+            interval_minutes = self.api_client.timing.TRANSACTION_INTERVAL_MINUTES
+            current_time = last_existing
+
+            for idx, trans in transactions:
+                if current_time is None or current_time.date() != trans_date:
+                    # No existing transaction this day - start at FIRST_TRANSACTION_HOUR
+                    current_time = datetime.combine(
+                        trans_date,
+                        datetime.min.time().replace(hour=self.api_client.timing.FIRST_TRANSACTION_HOUR, minute=0, second=0)
+                    )
+                else:
+                    # Add interval from last existing transaction
+                    current_time = current_time + timedelta(minutes=interval_minutes)
+
+                # Ensure timezone offset
+                if current_time.tzinfo is None:
+                    dt_str = current_time.strftime('%Y-%m-%dT%H:%M:%S+01:00')
+                else:
+                    dt_str = current_time.isoformat()
+                trans.datetime_str = dt_str
+
+                # Update current_time for next transaction (going up in OCR = newer)
+                current_time = current_time + timedelta(minutes=interval_minutes)
 
         self.table_view.display_transactions(self.parsed_transactions)
         self.table_view.print_transactions_console(self.parsed_transactions)
