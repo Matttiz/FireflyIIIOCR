@@ -645,34 +645,33 @@ class MainWindow(QMainWindow):
         # Sort by index descending (bottom to top = oldest to newest in OCR)
         new_transactions.sort(key=lambda x: -x[0])
 
-        # Process each transaction chronologically
-        for idx, trans in new_transactions:
-            # Determine account_id based on transaction type
-            if trans.transaction_type in ('withdrawal', 'transfer'):
-                account_id = trans.source_id
-            else:
-                account_id = trans.destination_id
+        # Get global latest transaction time from Firefly (across all accounts)
+        latest_global = self.api_client.get_global_latest_transaction_time(self.data_manager.data_dir)
+        logger.info(f"Latest global transaction from Firefly: {latest_global.isoformat() if latest_global else 'None'}")
 
-            if not account_id or not trans.date:
-                continue
+        interval_minutes = self.api_client.timing.TRANSACTION_INTERVAL_MINUTES
 
-            # Get last existing transaction from Firefly for this account/date
-            last_existing = self.api_client.get_last_transaction_for_account(
-                account_id, trans.date, self.data_manager.data_dir
+        # If no existing transactions at all, start at FIRST_TRANSACTION_HOUR on the date of the oldest new transaction
+        if latest_global is None:
+            oldest_date = new_transactions[-1][1].date if new_transactions else date.today()
+            current_time = datetime.combine(
+                oldest_date,
+                datetime.min.time().replace(hour=self.api_client.timing.FIRST_TRANSACTION_HOUR, minute=0, second=0)
             )
+        else:
+            # Start from the global latest transaction time
+            current_time = latest_global
 
-            interval_minutes = self.api_client.timing.TRANSACTION_INTERVAL_MINUTES
-            current_time = last_existing
-
-            if current_time is None or current_time.date() != trans.date:
-                # No existing transaction this day - start at FIRST_TRANSACTION_HOUR
+        # Process each transaction chronologically (oldest first)
+        # Each gets +TRANSACTION_INTERVAL_MINUTES from the previous
+        for idx, trans in new_transactions:
+            # Ensure the transaction date is respected (if current_time crossed midnight, use transaction's date)
+            if current_time.date() != trans.date:
+                # Transaction is on a different day - start at FIRST_TRANSACTION_HOUR for that day
                 current_time = datetime.combine(
                     trans.date,
                     datetime.min.time().replace(hour=self.api_client.timing.FIRST_TRANSACTION_HOUR, minute=0, second=0)
                 )
-            else:
-                # Add interval from last existing transaction
-                current_time = current_time + timedelta(minutes=interval_minutes)
 
             # Ensure timezone offset
             if current_time.tzinfo is None:
@@ -680,6 +679,9 @@ class MainWindow(QMainWindow):
             else:
                 dt_str = current_time.isoformat()
             trans.datetime_str = dt_str
+
+            # Increment for next transaction
+            current_time = current_time + timedelta(minutes=interval_minutes)
 
         self.table_view.display_transactions(self.parsed_transactions)
         self.table_view.print_transactions_console(self.parsed_transactions)
