@@ -9,7 +9,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.ocr.block_parser import BlockTransactionParser
-from src.ocr.transaction_parser import TransactionParser
+from src.ocr.account_matcher import AccountMatcher
 from src.model.transaction import Transaction
 
 
@@ -17,12 +17,14 @@ def load_accounts() -> list:
     """Load default test accounts matching BlockTransactionParser's account_keywords."""
     return [
         {'id': 1, 'name': 'KONTO Direct', 'type': 'asset'},
-        {'id': 2, 'name': 'ING Bank Śląski  Komfort (Wspólne)', 'type': 'asset'},  # matches 'ing', 'komfort', '4246', 'visa'
+        {'id': 2, 'name': 'KONTO Komfort', 'type': 'asset'},  # matches 'ing', 'komfort', '4246', 'visa'
         {'id': 3, 'name': 'Millennium', 'type': 'asset'},
         {'id': 4, 'name': 'KONTO Direct', 'type': 'asset'},
         {'id': 5, 'name': 'Smart Saver', 'type': 'asset'},
         {'id': 6, 'name': 'KONTO Komfort', 'type': 'asset'},
-        {'id': 7, 'name': 'Cash account', 'type': 'asset'},
+        {'id': 7, 'name': 'ING Bank Śląski Firmowe', 'type': 'asset'},  # Firm account
+        {'id': 8, 'name': 'Cash account', 'type': 'asset'},
+        {'id': 13, 'name': 'BNPPL (Świadczeniodawca)', 'type': 'revenue'},  # Revenue account for income
     ]
 
 
@@ -34,9 +36,13 @@ def parse_ocr_file(file_path: str, accounts: list = None, default_dest_id: int =
     with open(file_path, 'r', encoding='utf-8') as f:
         lines = [line.strip() for line in f if line.strip()]
 
-    # Use TransactionParser which builds keywords from accounts
-    parser = TransactionParser(accounts, default_dest_id)
-    return parser.parse_lines(lines)
+    # Use BlockTransactionParser directly (TransactionParser was removed)
+    # Filter only asset and cash accounts
+    asset_accounts = [acc for acc in accounts if acc.get('type') in ('asset', 'cash')]
+    account_matcher = AccountMatcher(asset_accounts)
+    account_keywords = account_matcher.keywords
+    parser = BlockTransactionParser(asset_accounts, default_dest_id, account_keywords)
+    return parser.parse_blocks(lines)
 
 
 def print_transactions(transactions: list[Transaction], accounts: list = None):
@@ -110,7 +116,11 @@ def main():
             print("Brak danych na wejściu")
             sys.exit(1)
 
-        parser = BlockTransactionParser(accounts)
+        # Filter only asset and cash accounts
+        asset_accounts = [acc for acc in accounts if acc.get('type') in ('asset', 'cash')]
+        account_matcher = AccountMatcher(asset_accounts)
+        account_keywords = account_matcher.keywords
+        parser = BlockTransactionParser(asset_accounts, 7, account_keywords)  # default_dest_id=7 for CLI
         transactions = parser.parse_blocks(lines)
 
     print_transactions(transactions, accounts)

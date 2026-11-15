@@ -52,12 +52,34 @@ class CategorySettings(BaseSettings):
     FURNITURE: int = 55
     LOAN: int = 56
 
+    # Elektronika
+    ELECTRONICS: int = 27
+
+    # Ubrania
+    CLOTHING: int = 14
+
+    # Opłaty stałe
+    FIXED_FEES: int = 16
+
+    # Opodatkowanie pracy / Księgowość
+    TAX_EMPLOYMENT: int = 57
+    ACCOUNTING: int = 24
+
+    # Dochody / Incomes
+    INCOME: int = 23
+
 
 class AccountSettings(BaseSettings):
     """Ustawienia kont domyślnych."""
 
     DEFAULT_CASH_ACCOUNT_NAME: str = "Cash account"
     CASH_ACCOUNT_ALIASES: list[str] = ["cash", "gotówka", "gotowka"]
+    REVENUE_ACCOUNT_ID: int = 13  # BNPPL (Świadczeniodawca) - Type: revenue
+    STOP_WORDS_PREFIXES: list[str] = [
+        'bank', 'konto', 'konta', 'the', 'and', 'or', 'of', 'in',
+        'z', 'w', 'na', 'dla', 'wspolne', 'wspólne',
+        'saldo', 'początkow', 'ing', 'śląski', 'komfort'
+    ]
 
 
 class TransactionTimingSettings(BaseSettings):

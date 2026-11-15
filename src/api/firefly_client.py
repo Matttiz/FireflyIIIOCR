@@ -139,6 +139,54 @@ class FireflyApiClient:
                         pass
         return last_dt
 
+    def get_earliest_transaction_for_account(self, account_id: int, target_date: Optional[date] = None) -> Optional[datetime]:
+        """
+        Pobiera NAJWCOWANIEJSZĄ transakcję dla danego konta z cache.
+        Jeśli target_date jest podane, szuka transakcji z tego dnia.
+        Zwraca datetime najwcześniejszej transakcji lub None.
+        """
+        if not self._transactions_cache:
+            return None
+
+        earliest_dt = None
+        str_account_id = str(account_id)
+
+        for trans in self._transactions_cache:
+            source_id = trans.get('source_id')
+            dest_id = trans.get('destination_id')
+            if source_id == str_account_id or dest_id == str_account_id:
+                trans_date_str = trans.get('date', '')
+                if trans_date_str:
+                    try:
+                        trans_dt = datetime.fromisoformat(trans_date_str.replace('Z', '+00:00'))
+                        if target_date is None or trans_dt.date() == target_date:
+                            if earliest_dt is None or trans_dt < earliest_dt:
+                                earliest_dt = trans_dt
+                    except:
+                        pass
+        return earliest_dt
+
+    def get_latest_transaction_for_date(self, target_date: date) -> Optional[datetime]:
+        """
+        Pobiera najpóźniejszą transakcję z Firefly dla konkretnej daty (globalnie, niezależnie od konta).
+        Zwraca datetime najpóźniejszej transakcji lub None.
+        """
+        if not self._transactions_cache:
+            return None
+
+        latest_dt = None
+        for trans in self._transactions_cache:
+            trans_date_str = trans.get('date', '')
+            if trans_date_str:
+                try:
+                    trans_dt = datetime.fromisoformat(trans_date_str.replace('Z', '+00:00'))
+                    if trans_dt.date() == target_date:
+                        if latest_dt is None or trans_dt > latest_dt:
+                            latest_dt = trans_dt
+                except:
+                    pass
+        return latest_dt
+
     def get_global_latest_transaction_time(self, data_dir: Optional[Path] = None) -> Optional[datetime]:
         """
         Pobiera bezwzględnie najnowszą transakcję ze wszystkich kont z cache.
@@ -186,6 +234,37 @@ class FireflyApiClient:
             # Jest transakcja tego dnia - dodaj TRANSACTION_INTERVAL_MINUTES
             # call_count pozwala na kolejne transakcje w tej samej sesji
             return last_trans + timedelta(minutes=self.timing.TRANSACTION_INTERVAL_MINUTES + call_count * self.timing.TRANSACTION_INTERVAL_MINUTES)
+
+    def get_batch_transaction_times(self, account_id: int, target_date: date, count: int, data_dir: Optional[Path] = None) -> List[datetime]:
+        """
+        Oblicza czasy dla partii transakcji tego samego dnia.
+        Zwraca listę datetime'ów zaczynających od najwcześniejszej transakcji z Firefly
+        (jeśli istnieje) lub FIRST_TRANSACTION_HOUR:00.
+
+        Args:
+            account_id: ID konta
+            target_date: Data transakcji
+            count: Liczba transakcji
+            data_dir: Opcjonalny katalog danych
+
+        Returns:
+            Lista datetime'ów dla każdej transakcji
+        """
+        # Sprawdź czy są transakcje tego dnia w Firefly
+        earliest_trans = self.get_earliest_transaction_for_account(account_id, target_date)
+
+        if earliest_trans and earliest_trans.date() == target_date:
+            # Są transakcje tego dnia - zaczynamy od najwcześniejszej + odstęp
+            base_time = earliest_trans + timedelta(minutes=self.timing.TRANSACTION_INTERVAL_MINUTES)
+        else:
+            # Brak transakcji tego dnia - zacznij o FIRST_TRANSACTION_HOUR:00
+            base_time = datetime.combine(target_date, datetime.min.time().replace(hour=self.timing.FIRST_TRANSACTION_HOUR, minute=0, second=0))
+
+        times = []
+        for i in range(count):
+            times.append(base_time + timedelta(minutes=i * self.timing.TRANSACTION_INTERVAL_MINUTES))
+
+        return times
 
     def create_transaction(self, transaction: Dict[str, Any], account_id: Optional[int] = None) -> bool:
         """Tworzy transakcję w Firefly z poprawnym formatem daty i czasem."""

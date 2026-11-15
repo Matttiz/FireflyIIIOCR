@@ -232,11 +232,16 @@ class TransferMerger:
             dest_name = "Nieznane"
 
         # KATEGORIA: SmartSaver tylko dla przelewu NA Smart Saver (destination), inaczej Transfer
-        # Account IDs from Firefly API are strings, so compare as strings
-        # SmartSaver account ID is typically 38
-        is_smartsaver_dest = str(dest_id) == '38'
-        category_id = self.cat.SMART_SAVER if is_smartsaver_dest else self.cat.TRANSFER
-        # Opis: "Smart Saver" tylko dla przelewu NA Smart Saver, inaczej "Transfer"
+        # Sprawdź nazwę konta zamiast ID - bardziej uniwersalne
+        is_smartsaver_dest = False
+        if dest_id:
+            for acc in self.accounts:
+                if acc.get('id') == dest_id and 'smart saver' in acc.get('name', '').lower():
+                    is_smartsaver_dest = True
+                    break
+
+        # Zawsze kategoria Transfer, opis "Smart Saver" tylko dla przelewu na Smart Saver
+        category_id = self.cat.TRANSFER
         description = "Smart Saver" if is_smartsaver_dest else "Transfer"
 
         return Transaction(

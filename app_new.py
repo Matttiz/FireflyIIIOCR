@@ -7,7 +7,8 @@ from PySide6.QtWidgets import QApplication
 
 from src.api.firefly_client import FireflyApiClient, FireflyDataManager
 from src.ocr.ocr_processor import OcrProcessor
-from src.ocr.transaction_parser import TransactionParser
+from src.ocr.block_parser import BlockTransactionParser
+from src.ocr.account_matcher import AccountMatcher
 from src.ui.main_window import MainWindow
 from src.config import get_settings, WindowSettings
 
@@ -62,22 +63,28 @@ def main():
     ocr_processor = OcrProcessor(language="pol")
 
     # Parser needs accounts - will be updated after loading
-    transaction_parser = TransactionParser([], 5)  # temporary
+    # Use BlockTransactionParser directly (TransactionParser was a thin wrapper)
+    block_parser = None
 
     app = QApplication(sys.argv)
 
-    # Create main window - it will load accounts and update parser
+    # Create main window
     window = MainWindow(
         api_client=api_client,
         data_manager=data_manager,
         ocr_processor=ocr_processor,
-        transaction_parser=transaction_parser,
+        transaction_parser=None,  # Will be set after accounts loaded
     )
 
-    # Update parser with loaded accounts
-    window.transaction_parser.update_accounts(
-        window.accounts,
-        window.default_destination_account_id
+    # Update parser with loaded accounts - create BlockTransactionParser directly
+    from src.ocr.account_matcher import AccountMatcher
+    asset_accounts = [acc for acc in window.accounts if acc.get('type') in ('asset', 'cash')]
+    account_matcher = AccountMatcher(asset_accounts)
+    account_keywords = account_matcher.keywords
+    window.transaction_parser = BlockTransactionParser(
+        asset_accounts,
+        window.default_destination_account_id,
+        account_keywords
     )
 
     window.show()

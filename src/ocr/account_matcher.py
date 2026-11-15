@@ -6,6 +6,8 @@ import re
 from typing import Dict, List, Optional
 import logging
 
+from src.config import get_settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -49,26 +51,28 @@ class AccountMatcher:
 
             name_lower = acc_name.lower()
 
-            # Banki
-            if 'ing' in name_lower:
+            # Banki - don't overwrite existing keywords (keep first match)
+            if 'ing' in name_lower and 'ing' not in self.account_keywords:
                 self.account_keywords['ing'] = acc_id
-            if 'milennium' in name_lower or 'millenium' in name_lower:
+            if ('milennium' in name_lower or 'millenium' in name_lower) and 'millennium' not in self.account_keywords:
                 self.account_keywords['millennium'] = acc_id
-            if 'pekao' in name_lower:
+            if 'pekao' in name_lower and 'pekao' not in self.account_keywords:
                 self.account_keywords['pekao'] = acc_id
-            if 'mali' in name_lower:
+            if 'mali' in name_lower and 'mali' not in self.account_keywords:
                 self.account_keywords['mali'] = acc_id
 
-            # Rodzaje kont
-            if 'komfort' in name_lower:
+            # Rodzaje kont - don't overwrite existing
+            if 'komfort' in name_lower and 'komfort' not in self.account_keywords:
                 self.account_keywords['komfort'] = acc_id
-            if 'direct' in name_lower:
+            if 'direct' in name_lower and 'direct' not in self.account_keywords:
                 self.account_keywords['direct'] = acc_id
-            if 'smart' in name_lower and 'saver' in name_lower:
+            if 'smart' in name_lower and 'saver' in name_lower and 'smart saver' not in self.account_keywords:
                 self.account_keywords['smart saver'] = acc_id
-            if 'cash' in name_lower or 'gotówka' in name_lower or 'gotowka' in name_lower:
-                self.account_keywords['cash'] = acc_id
-                self.account_keywords['gotówka'] = acc_id
+            if ('cash' in name_lower or 'gotówka' in name_lower or 'gotowka' in name_lower):
+                if 'cash' not in self.account_keywords:
+                    self.account_keywords['cash'] = acc_id
+                if 'gotówka' not in self.account_keywords:
+                    self.account_keywords['gotówka'] = acc_id
 
             # Cała nazwa jako keyword
             self.account_keywords[acc_name.lower()] = acc_id
@@ -126,6 +130,14 @@ class AccountMatcher:
             # Używaj granic słów dla keywords też
             pattern = r'\b' + re.escape(keyword_lower) + r'\b'
             if re.search(pattern, text_lower):
+                # Specjalne dopasowanie dla "Firmy" - preferuj konto firmowe
+                if 'firmy' in text_lower or 'firmowe' in text_lower:
+                    if keyword_lower in ['direct', 'komfort', 'ing']:
+                        for acc in self._accounts_lower:
+                            if 'firmowe' in acc['name_lower']:
+                                logger.debug(f"Znaleziono konto firmowe dla 'Firmy' i keyword '{keyword}': {acc['name']}")
+                                return {'id': acc['id'], 'name': acc['name']}
+
                 # Znajdź konto po ID
                 for acc in self._accounts_lower:
                     if acc['id'] == acc_id:
@@ -140,7 +152,8 @@ class AccountMatcher:
             acc_words = set(acc_name.split())
 
             # Znajdź znaczące słowa w nazwie konta (>3 znaki, pomijając "bank", "konto", "saldo", "początkow", itp.)
-            stop_words_prefixes = {'bank', 'konto', 'konta', 'the', 'and', 'or', 'of', 'in', 'z', 'w', 'na', 'dla', 'wspolne', 'wspólne', 'saldo', 'początkow', 'ing', 'śląski', 'komfort'}
+            settings = get_settings()
+            stop_words_prefixes = set(settings.accounts.STOP_WORDS_PREFIXES)
             significant_words = [w for w in acc_words if len(w) > 3 and not any(w.startswith(sw) for sw in stop_words_prefixes if len(sw) > 2)]
 
             if significant_words:

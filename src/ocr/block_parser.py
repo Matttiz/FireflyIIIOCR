@@ -35,19 +35,27 @@ class BlockTransactionParser:
         self.timing = settings.timing
         self.features = settings.features
 
+        # Revenue account ID for BNPPL Świadczeniodawca (income source) - from config
+        self.revenue_account_id = settings.accounts.REVENUE_ACCOUNT_ID
+
         # Wzorce
         # Obsługuje: -10,00 PLN, +2,00 PLN, —10,00 PLN, —-26,56 PLN (podwójny dash), ---10,00 PLN
         # Wzorzec szuka znaku +/-/—/– na początku (po białym znaku) followed by cyfry,
         # a wartość musi być seguida przez 'PLN' (nie samo spacje koniec linii)
         # Używamy finditer i bierzemy ostatni match (który zawiera PLN), żeby uniknąć fałszowych dopasowań np. '01' z numeru karty
-        self.amount_pattern = re.compile(r'(?:^|\s)([+\-—–]+)\s*(\d+(?:[.,]\d{2})?)\s*PLN')
+        # Obsługuje spacje jako separator tysięcy: 20 664,00 PLN
+        # OBSŁUGA KWOT BEZ ZNAKU (dla linii z "Wydatek"/"Wpływ"/"Nie analizuj" gdziekolwiek w linii)
+        self.amount_pattern = re.compile(r'(?:^|\s)([+\-—–]+)\s*([\d\s]+(?:[.,]\d{2})?)\s*PLN')
+        self.amount_pattern_no_sign = re.compile(r'(?:Wydatek|Wpływ|Nie analizuj).*?([\d\s]+(?:[.,]\d{2})?)\s*PLN', re.IGNORECASE)
 
         # Prefiksy dni (z kropkami i bez)
         self.day_prefixes = ['Wczoraj', 'Dziś', 'Pn', 'Pn.', 'Wt', 'Wt.', 'Śr', 'Śr.', 'Cz', 'Cz.', 'Pt', 'Pt.', 'Pi', 'Pi.', 'Sb', 'Sb.', 'Nd', 'Nd.',
                              'Pon', 'Pon.', 'Wto', 'Wto.', 'Śro', 'Śro.', 'Czw', 'Czw.', 'Pią', 'Pią.', 'Sob', 'Sob.', 'Nie', 'Nie.']
 
+        # Wzorzec dla startu transakcji - może być na początku linii LUB w środku (dla połączonych linii)
+        # Używamy (?<=^|\s) dla granicy słowa przed dniem
         self.start_transaction_pattern = re.compile(
-            r'^(?:' + '|'.join(re.escape(p) for p in self.day_prefixes) + r')\s*(?:[A-Za-z0-9©>uS5]+)?\s*(\d{2}[./-]\d{2}[./-]\d{2,4})',
+            r'(?:' + '|'.join(re.escape(p) for p in self.day_prefixes) + r')\s*(?:[A-Za-z0-9©>uS5]+)?\s*(\d{2}[./-]\d{2}[./-]\d{2,4})',
             re.IGNORECASE
         )
 
@@ -69,9 +77,20 @@ class BlockTransactionParser:
 
         raw_transactions = []
         for block_idx, block_lines in enumerate(blocks):
-            tx = self._parse_single_block(block_lines, block_idx)
-            if tx:
-                raw_transactions.append(tx)
+            # Znajdź WSZYSTKIE linie z datą i kwotą w bloku
+            transaction_lines = []
+            for idx, line in enumerate(block_lines):
+                if self._is_transaction_start(line):
+                    transaction_lines.append(idx)
+
+            if not transaction_lines:
+                continue
+
+            # Parsuj każdą transakcję w bloku
+            for line_idx in transaction_lines:
+                tx = self._parse_single_transaction(block_lines, line_idx)
+                if tx:
+                    raw_transactions.append(tx)
 
         # 2. Wykryj i połącz pary transferów wewnętrznych (Przelew własny)
         merged_transactions = self.transfer_merger.merge(raw_transactions)
@@ -82,20 +101,95 @@ class BlockTransactionParser:
 
     def _group_into_blocks(self, lines: List[str]) -> List[List[str]]:
         """Grupuje linie w bloki - nowa transakcja gdy linia zaczyna się od daty/dnia.
-        Linie przed pierwszą transakcją (np. adres sklepu, konto) są dołączane do pierwszego bloku."""
+        Linie przed pierwszą transakcją (np. adres sklepu, konto) są dołączane do pierwszego bloku.
+        Obsługuje transakcje rozłożone na 2 linie: jedna z datą, druga z kwotą."""
         blocks: List[List[str]] = []
         current_block: List[str] = []
         pre_header_lines: List[str] = []  # Linie przed pierwszą transakcją (adres, konto)
+        pending_amount_line: str = ""  # Linia z kwotą czekająca na linię z datą
+        pending_date_line: str = ""    # Linia z datą czekająca na linię z kwotą
 
         for line in lines:
             line = line.strip()
             if not line or line.lower() in ['c', 'l']:
                 continue
 
-            is_new_transaction = self._is_transaction_start(line)
+            has_day_date = bool(self.start_transaction_pattern.match(line) or re.match(r'^\d{2}[./-]\d{2}[./-]\d{2,4}', line))
+            has_amount = bool(self.amount_pattern.search(line) or self.amount_pattern_no_sign.search(line))
+            is_new_transaction = has_day_date and has_amount
+
+            # Jeśli linia ma kwotę ale nie ma daty - zapisz jako pending
+            # Ale tylko jeśli to nie jest linia z kategorią bankową / saldem
+            if has_amount and not has_day_date:
+                is_bank_category = any(cat in line for cat in [
+                    'Rozrywka', 'Spożywcze', 'Pozostałe', 'Nie analizuj',
+                    'Wydatki podstawowe', 'Zdrowie i uroda', 'Opłata Finanse',
+                    'Dom i rachunki'
+                ])
+                # Jeśli mamy pending date line, POŁĄCZ ZAWSZE (nawet jeśli to kategoria bankowa)
+                if pending_date_line:
+                    combined_line = pending_date_line + " " + line
+                    pending_date_line = ""
+                    line = combined_line
+                    has_day_date = True
+                    is_new_transaction = True
+                elif is_bank_category:
+                    # To kategoria bankowa / saldo - dodaj do opisu aktualnego bloku
+                    if current_block:
+                        current_block.append(line)
+                    continue
+                else:
+                    pending_amount_line = line
+                    continue
+
+            # Jeśli linia ma datę ale nie ma kwoty (zwykłej) - sprawdź amount_pattern_no_sign
+            has_amount_any = has_amount or bool(self.amount_pattern_no_sign.search(line))
+
+            # Jeśli linia ma datę i kwotę (z amount_pattern_no_sign) A MAMY pending_amount_line - POŁĄCZ JE
+            if has_day_date and has_amount_any and not has_amount and pending_amount_line:
+                # To linia z datą + "Wydatek/Wpływ" kwotą, mamy pending amount line - połącz
+                combined_line = pending_amount_line + " " + line
+                pending_amount_line = ""
+                line = combined_line
+                has_amount = True
+                is_new_transaction = True
+            # Jeśli linia ma datę I kwotę (zwykłą), A MAMY pending_amount_line - POŁĄCZ JE TEŻ
+            elif has_day_date and has_amount and pending_amount_line:
+                # To linia z datą + zwykłą kwotą, mamy pending amount line - połącz
+                combined_line = pending_amount_line + " " + line
+                pending_amount_line = ""
+                line = combined_line
+                has_amount = True
+                is_new_transaction = True
+            elif has_day_date and not has_amount_any:
+                # Tylko data, brak kwoty - pending date
+                pending_date_line = line
+                continue
+
+            # Jeśli linia ma datę ale nie ma kwoty (zwykłej), a mamy pending amount line - połącz je
+            # NIE łącz jeśli nowa linia już ma kwotę (to oddzielna transakcja)
+            if has_day_date and not has_amount and pending_amount_line:
+                # Połącz pending amount line z tą linią jako jeden wpis
+                combined_line = pending_amount_line + " " + line
+                pending_amount_line = ""
+                line = combined_line
+                # Teraz line ma i datę i kwotę - przelicz is_new_transaction
+                has_amount = True
+                is_new_transaction = True
 
             if is_new_transaction:
                 if current_block:
+                    # Jeśli ostatnia linia w bieżącym bloku wygląda jak nazwa podmiotu (nie jest krótki
+                    # znacznik typu Wydatek/wpływ/Nie analizuj), przenieś ją do nowego bloku jako pre-header
+                    if len(current_block) >= 2:
+                        last_line = current_block[-1]
+                        # Ignoruj krótkie słowa kluczowe
+                        if last_line.lower() not in ['wydatek', 'wpływ', 'nie analizuj', 'wpływ'] and not self.amount_pattern.search(last_line):
+                            # Sprawdź długość i brak słowa kluczowego
+                            if len(last_line) > 20 and not re.match(r'^\s*(wydatek|wpływ|nie analizuj)\s*$', last_line, re.IGNORECASE):
+                                # Przenieś ostatnią linię do pre-header
+                                pre_header = current_block.pop()
+                                pre_header_lines.append(pre_header)
                     blocks.append(current_block)
                 # Nowy blok: najpierw pre-header lines, potem linia transakcji
                 current_block = pre_header_lines + [line]
@@ -107,6 +201,14 @@ class BlockTransactionParser:
                     # Linia przed pierwszą transakcją - zapisz jako pre-header
                     pre_header_lines.append(line)
 
+        # Jeśli została pending amount line na końcu, dodaj jako nowy blok
+        if pending_amount_line:
+            if current_block:
+                blocks.append(current_block)
+                current_block = []
+            current_block = pre_header_lines + [pending_amount_line]
+            pre_header_lines = []
+
         if current_block:
             blocks.append(current_block)
 
@@ -114,8 +216,8 @@ class BlockTransactionParser:
 
     def _is_transaction_start(self, line: str) -> bool:
         """Sprawdza czy linia to początek nowej transakcji (zawiera dzień + datę + kwotę)"""
-        has_day_date = bool(self.start_transaction_pattern.match(line) or re.match(r'^\d{2}[./-]\d{2}[./-]\d{2,4}', line))
-        has_amount = bool(self.amount_pattern.search(line))
+        has_day_date = bool(self.start_transaction_pattern.search(line) or re.search(r'\d{2}[./-]\d{2}[./-]\d{2,4}', line))
+        has_amount = bool(self.amount_pattern.search(line) or self.amount_pattern_no_sign.search(line))
         return has_day_date and has_amount
 
     def _parse_single_block(self, block_lines: List[str], block_idx: int) -> Optional[Transaction]:
@@ -124,15 +226,26 @@ class BlockTransactionParser:
         if not block_lines:
             return None
 
-        # Znajdź linię z datą i kwotą (główna linia transakcji)
-        main_line_idx = -1
+        # Znajdź WSZYSTKIE linie z datą i kwotą w bloku (może być ich kilka)
+        transaction_lines = []
         for idx, line in enumerate(block_lines):
             if self._is_transaction_start(line):
-                main_line_idx = idx
-                break
+                transaction_lines.append((idx, line))
 
-        if main_line_idx == -1:
+        if not transaction_lines:
             # Nie znaleziono linii z datą i kwotą
+            return None
+
+        # Jeśli jest tylko jedna transakcja w bloku, użyj oryginalnej logiki
+        if len(transaction_lines) == 1:
+            return self._parse_single_transaction(block_lines, transaction_lines[0][0])
+
+        # Wiele transakcji w jednym bloku - sparsuj pierwszą, reszta zostanie do przetworzenia później
+        return self._parse_single_transaction(block_lines, transaction_lines[0][0])
+
+    def _parse_single_transaction(self, block_lines: List[str], main_line_idx: int) -> Optional[Transaction]:
+        """Parsuje pojedynczą transakcję z bloku, zaczynając od wskazanej linii."""
+        if not block_lines:
             return None
 
         main_line = block_lines[main_line_idx]
@@ -147,13 +260,9 @@ class BlockTransactionParser:
         if not amount_match:
             return None
 
-        # amount_match.group(1) to znak (+, -), group(2) to wartość liczbowa (z przecinkiem np. "0,50")
-        # Regex: r'(?:^|\s)([+-—–])\s*(\d{1,3}(?:[.,]\d{2})?)(?:\s*PLN|\s+|$)'
         amount_sign_raw = amount_match.group(1)
-        amount_value_str = amount_match.group(2)  # np. "0,50" lub "50" (bez znaku)
+        amount_value_str = amount_match.group(2)
 
-        # Użyj TransactionTypeResolver do wyciągnięcia znaku i wartości
-        # Resolver expects full string with sign, so build it
         sign, amount_val = TransactionTypeResolver.resolve_from_amount(amount_sign_raw + amount_value_str)
 
         # Opis z głównej linii (przed kwotą)
@@ -164,9 +273,17 @@ class BlockTransactionParser:
         account_part = main_line[amount_match.end():].strip()
 
         # Pre-header lines (przed główną linią) - dołącz do opisu
+        # Ale pomijaj linie z kategoriami bankowymi / saldem
+        bank_category_keywords = [
+            'Rozrywka', 'Spożywcze', 'Pozostałe', 'Nie analizuj',
+            'Wydatki podstawowe', 'Zdrowie i uroda', 'Opłata Finanse',
+            'Dom i rachunki'
+        ]
         pre_header_desc = ""
         for i in range(main_line_idx):
-            pre_header_desc += " " + block_lines[i]
+            line = block_lines[i]
+            if not any(cat in line for cat in bank_category_keywords):
+                pre_header_desc += " " + line
 
         # Podział linii po głównej (2 i 3)
         desc_part2 = ""
@@ -184,12 +301,13 @@ class BlockTransactionParser:
             else:
                 has_amount = bool(self.amount_pattern.search(extra_line))
                 if not has_amount:
-                    # Pomijamy linie będące tylko nazwami kategorii/śmieciami OCR jak "Rozrywka i podróże", "i" itp.
-                    if any(cat in extra_line for cat in ['Rozrywka', 'Spożywcze', 'Pozostałe', 'Nie analizuj']):
-                        category_name = extra_line
+                    # Skip bank internal categories (they are not our transaction categories)
+                    if any(cat in extra_line for cat in [
+                        'Rozrywka', 'Spożywcze', 'Pozostałe', 'Nie analizuj',
+                        'Wydatki podstawowe', 'Zdrowie i uroda', 'Opłata Finanse'
+                    ]):
                         continue
                     if len(extra_line) <= 3 and extra_line.isalpha():
-                        # Pojedyncze litery / śmieci OCR
                         continue
                     desc_part2 += " " + extra_line
                 else:
@@ -203,7 +321,6 @@ class BlockTransactionParser:
         category = self.category_classifier.classify(full_desc, category_name)
 
         # Dopasuj konto (używając AccountMatcher)
-        # Najpierw szukaj w liniach pre-header - mogą zawierać nazwiska kont
         matched_account = None
         for i in range(main_line_idx):
             line_account = self.account_matcher.find_account(block_lines[i])
@@ -211,15 +328,12 @@ class BlockTransactionParser:
                 matched_account = line_account
                 break
 
-        # Sprawdź też account_part
         if not matched_account:
             matched_account = self.account_matcher.find_account(account_part)
 
-        # Fallback na pełny opis
         if not matched_account:
             matched_account = self.account_matcher.find_account(full_desc)
 
-        # Dodatkowa ochrona: jeśli konto zawiera "Saldo początkowe", odrzuć je
         if matched_account:
             acc_name_lower = matched_account['name'].lower()
             if 'saldo początkowe' in acc_name_lower:
@@ -235,16 +349,19 @@ class BlockTransactionParser:
             acc_id = matched_account['id']
             if sign == '+':
                 destination_id = acc_id
-                # Dla wpłaty: sprawdź czy to transfer wewnętrzny/SmartSaver
-                # Jeśli tak, źródło to konto źródłowe z transferu (np. ING Direct), nie Cash account
                 is_internal_transfer = (
                     'przelew własny' in full_desc.lower() or
                     'transfer wewnętrzny' in full_desc.lower() or
                     'smart saver' in full_desc.lower() or
                     'przelew wewnętrzny' in full_desc.lower()
                 )
+                # Check if this is T-MOBILE/BNPPL/Świadczeniodawca income on firm account
+                is_income_from_revenue = (
+                    category and category.get('category_id') == self.cat.INCOME and
+                    any(kw in full_desc.lower() for kw in ['t-mobile', 'bnpp', 'bnpparibas', 'świadczeniodawca']) and
+                    matched_account and 'firmowe' in matched_account['name'].lower()
+                )
                 if is_internal_transfer:
-                    # Dla transferów wewnętrznych szukaj konta źródłowego w tekście (np. "Direct", "KONTO Direct")
                     source_account = self.account_matcher.find_source_account_for_transfer(full_desc, self.accounts)
                     if source_account:
                         source_id = source_account['id']
@@ -252,50 +369,39 @@ class BlockTransactionParser:
                         cash_account = self.account_matcher.find_cash_account(self.accounts)
                         if cash_account:
                             source_id = cash_account['id']
+                elif is_income_from_revenue:
+                    # Set revenue account as source for T-MOBILE/BNPPL income on firm account
+                    source_id = self.revenue_account_id
+                    logger.debug(f"Ustawiono konto przychodowe {self.revenue_account_id} jako źródło dla: {full_desc[:60]}")
                 else:
-                    # Dla zwykłych wpłat (np. odsetki): źródło to Cash account
                     cash_account = self.account_matcher.find_cash_account(self.accounts)
                     if cash_account:
                         source_id = cash_account['id']
             else:
                 source_id = acc_id
-                # Dla wydatku (podatek): docelowe to Cash account
                 cash_account = self.account_matcher.find_cash_account(self.accounts)
                 if cash_account:
                     destination_id = cash_account['id']
 
-        # Default destination jeśli nie znaleziono
         if destination_id is None and sign == '+':
-            # Dla wpłaty zawsze fallback na default_destination_id
             destination_id = self.default_destination_id
         if destination_id is None and sign == '-':
-            # Dla wydatek domyśl destinations to Cash account (gotówka)
             cash_account = self.account_matcher.find_cash_account(self.accounts)
             if cash_account:
                 destination_id = cash_account['id']
             else:
                 destination_id = self.default_destination_id
-        # Dla wydatków NIE ustawiamy source_id jako Cash account fallback, CHYBA ŻE to nie jest transfer/deposit
-        # Ale dla transferu/deposit zachowaj default_destination_id jeśli brak
         if source_id is None:
             if sign == '+':
-                # Wpłata - jeśli nie znaleziono konta docelowego, źródło to Cash account
                 cash_account = self.account_matcher.find_cash_account(self.accounts)
                 if cash_account:
                     source_id = cash_account['id']
             else:
-                # Wypłata bez źródła - NIE ustawiaj Cash account jako źródło, zostaw None żeby auto_completer znalazł
                 pass
 
-        # Określ typ transakcji (używając TransactionTypeResolver)
-        # force_sign_based=True: na etapie parsowania zawsze używamy znaku kwoty
-        # Typ 'transfer' ustawi dopiero TransferMerger po połączeniu pary
         trans_type = TransactionTypeResolver.resolve(sign, category, force_sign_based=True)
 
-        # Użyj opisu z kategorii jeśli dostępny, inaczej pełny opis
         final_description = category.get('description', full_desc) if category else full_desc
-
-        # Wyczyść opis z artefaktów OCR na początku (np. "0> ", "© ", ". ", "e ")
         final_description = self._clean_description_start(final_description)
 
         raw_line = ' | '.join(block_lines)

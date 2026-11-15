@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 from src.model.transaction import Transaction, Account, Category
 from src.api.firefly_client import FireflyApiClient, FireflyDataManager
 from src.ocr.ocr_processor import OcrProcessor
-from src.ocr.transaction_parser import TransactionParser
+from src.ocr.block_parser import BlockTransactionParser
 from src.services.transaction_services import (
     TransactionMatcher,
     TransactionAutoCompleter,
@@ -205,14 +205,15 @@ class TransactionTableView(QWidget):
         header_line = " | ".join(f"{headers[i]:<{col_widths[i]}}" for i in range(len(headers)))
         separator = "-+-".join("-" * w for w in col_widths)
 
-        logger.info(f"\n{header_line}")
-        logger.info(separator)
-
+        # Zbuduj całą tabelę jako jeden string z nowymi liniami
+        lines = [header_line, separator]
         for row in rows:
             line = " | ".join(f"{str(row[i]):<{col_widths[i]}}" for i in range(len(row)))
-            logger.info(line)
+            lines.append(line)
+        lines.append(f"Łącznie transakcji: {len(rows)}")
 
-        logger.info(f"\nŁącznie transakcji: {len(rows)}")
+        # Jeden log z całą tabelą
+        logger.info("\n" + "\n".join(lines))
 
     def display_transactions(self, transactions: List[Transaction]):
         self.transactions = transactions
@@ -395,7 +396,7 @@ class MainWindow(QMainWindow):
         api_client: FireflyApiClient,
         data_manager: FireflyDataManager,
         ocr_processor: OcrProcessor,
-        transaction_parser: TransactionParser,
+        transaction_parser: Optional[BlockTransactionParser] = None,
     ):
         super().__init__()
         self.setWindowTitle("Firefly III — Clipboard")
@@ -600,8 +601,13 @@ class MainWindow(QMainWindow):
         self.status.setText("Analizuję zrzut...")
         QApplication.processEvents()
 
+        # Odśwież cache transakcji z Firefly API przed analizą
+        count = self.api_client.refresh_transactions_from_api(limit=500)
+        if count > 0:
+            logger.info(f"Analiza: Odświeżono {count} transakcji z Firefly API")
+
         # Parse
-        parsed = self.transaction_parser.parse_lines(lines)
+        parsed = self.transaction_parser.parse_blocks(lines)
 
         if not parsed:
             QMessageBox.information(
@@ -655,43 +661,45 @@ class MainWindow(QMainWindow):
         # Sort by index descending (bottom to top = oldest to newest in OCR)
         new_transactions.sort(key=lambda x: -x[0])
 
-        # Get global latest transaction time from Firefly (across all accounts)
-        latest_global = self.api_client.get_global_latest_transaction_time(self.data_manager.data_dir)
-        logger.info(f"Latest global transaction from Firefly: {latest_global.isoformat() if latest_global else 'None'}")
+        # Group transactions by date
+        from collections import defaultdict
+        transactions_by_date = defaultdict(list)
+        for idx, trans in new_transactions:
+            transactions_by_date[trans.date].append((idx, trans))
 
         interval_minutes = self.api_client.timing.TRANSACTION_INTERVAL_MINUTES
 
-        # If no existing transactions at all, start at FIRST_TRANSACTION_HOUR on the date of the oldest new transaction
-        if latest_global is None:
-            oldest_date = new_transactions[-1][1].date if new_transactions else date.today()
-            current_time = datetime.combine(
-                oldest_date,
-                datetime.min.time().replace(hour=self.api_client.timing.FIRST_TRANSACTION_HOUR, minute=0, second=0)
-            )
-        else:
-            # Start from the global latest transaction time
-            current_time = latest_global
+        # For each date, get the latest Firefly transaction for that date
+        # and use it as base time for new transactions
+        for trans_date, date_transactions in sorted(transactions_by_date.items()):
+            # Sort by index descending (oldest first in OCR = bottom to top)
+            date_transactions.sort(key=lambda x: -x[0])
 
-        # Process each transaction chronologically (oldest first)
-        # Each gets +TRANSACTION_INTERVAL_MINUTES from the previous
-        for idx, trans in new_transactions:
-            # Ensure the transaction date is respected (if current_time crossed midnight, use transaction's date)
-            if current_time.date() != trans.date:
-                # Transaction is on a different day - start at FIRST_TRANSACTION_HOUR for that day
+            # Get latest transaction from Firefly for this date
+            latest_for_date = self.api_client.get_latest_transaction_for_date(trans_date)
+            logger.info(f"Latest Firefly transaction for {trans_date}: {latest_for_date.isoformat() if latest_for_date else 'None'}")
+
+            if latest_for_date:
+                # There are existing transactions for this date - start after the latest one
+                current_time = latest_for_date + timedelta(minutes=interval_minutes)
+            else:
+                # No existing transactions for this date - start at FIRST_TRANSACTION_HOUR
                 current_time = datetime.combine(
-                    trans.date,
+                    trans_date,
                     datetime.min.time().replace(hour=self.api_client.timing.FIRST_TRANSACTION_HOUR, minute=0, second=0)
                 )
 
-            # Ensure timezone offset
-            if current_time.tzinfo is None:
-                dt_str = current_time.strftime('%Y-%m-%dT%H:%M:%S+01:00')
-            else:
-                dt_str = current_time.isoformat()
-            trans.datetime_str = dt_str
+            # Process each transaction for this date (oldest first in OCR order)
+            for idx, trans in date_transactions:
+                # Ensure timezone offset
+                if current_time.tzinfo is None:
+                    dt_str = current_time.strftime('%Y-%m-%dT%H:%M:%S+01:00')
+                else:
+                    dt_str = current_time.isoformat()
+                trans.datetime_str = dt_str
 
-            # Increment for next transaction
-            current_time = current_time + timedelta(minutes=interval_minutes)
+                # Increment for next transaction
+                current_time = current_time + timedelta(minutes=interval_minutes)
 
         self.table_view.display_transactions(self.parsed_transactions)
         self.table_view.print_transactions_console(self.parsed_transactions)

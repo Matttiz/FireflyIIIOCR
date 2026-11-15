@@ -2,7 +2,9 @@
 Classifier for transaction category and description based on OCR text.
 Extracted from BlockTransactionParser to avoid spaghetti code.
 """
+import json
 import re
+from pathlib import Path
 from typing import Dict, Optional, List
 import logging
 
@@ -19,6 +21,7 @@ class CategoryClassifier:
     """
     Klasyfikuje transakcje na podstawie opisu (tekstu OCR).
     Zwraca kategorię, typ transakcji i opcjonalnie nadpisuje opis.
+    Słowa kluczowe ładowane z pliku JSON (category_keywords.json).
     """
 
     def __init__(self, custom_keywords: Optional[Dict] = None):
@@ -29,97 +32,8 @@ class CategoryClassifier:
         settings = get_settings()
         self.cat = settings.categories
 
-        # Mapowanie słów kluczowych na kategorie (z historii Firefly 500 transakcji)
-        # Używa ID z konfiguracji zamiast magic numbers
-        self.CATEGORY_KEYWORDS = {
-            # SmartSaver
-            'smart saver': {'category_id': self.cat.SMART_SAVER, 'name': 'SmartSaver', 'type': 'deposit'},
-            'smart': {'category_id': self.cat.SMART_SAVER, 'name': 'SmartSaver', 'type': 'deposit'},
-
-            # Hazard / STS
-            'sts.pl': {'category_id': self.cat.HAZARD, 'name': 'Hazard', 'type': 'withdrawal', 'description': 'STS'},
-            'sts': {'category_id': self.cat.HAZARD, 'name': 'Hazard', 'type': 'withdrawal', 'description': 'STS'},
-            'www.sts.pl': {'category_id': self.cat.HAZARD, 'name': 'Hazard', 'type': 'withdrawal', 'description': 'STS'},
-
-            # Transfer wewnętrzny
-            'transfer wewnętrzny': {'category_id': self.cat.TRANSFER, 'name': 'Transfer', 'type': 'transfer', 'description': 'Transfer'},
-            'przelew własny': {'category_id': self.cat.TRANSFER, 'name': 'Transfer', 'type': 'transfer', 'description': 'Transfer'},
-            'własny': {'category_id': self.cat.TRANSFER, 'name': 'Transfer', 'type': 'transfer', 'description': 'Transfer'},
-
-            # Sprzedawcy - Szpargały
-            'helion.pl': {'category_id': self.cat.MISC, 'name': 'Szpargały', 'type': 'withdrawal'},
-            'payu': {'category_id': self.cat.MISC, 'name': 'Szpargały', 'type': 'withdrawal'},
-            'pepco': {'category_id': self.cat.MISC, 'name': 'Szpargały', 'type': 'withdrawal'},
-            'brico': {'category_id': self.cat.MISC, 'name': 'Szpargały', 'type': 'withdrawal'},
-
-            # Drogerie - Chemia domowa i środki higieniczne
-            'rossmann': {'category_id': self.cat.HOUSEHOLD_CHEMICALS, 'name': 'Chemia domowa i środki higieniczne', 'type': 'withdrawal', 'description': 'Rossmann'},
-
-            # Supermarkety - Spożywcze
-            'spar': {'category_id': self.cat.GROCERIES, 'name': 'Spożywcze', 'type': 'withdrawal', 'description': 'Spar'},
-            'lidl': {'category_id': self.cat.GROCERIES, 'name': 'Spożywcze', 'type': 'withdrawal', 'description': 'Lidl'},
-
-            # Kot
-            'aqua': {'category_id': self.cat.CAT, 'name': 'Kot', 'type': 'withdrawal', 'description': 'Aqua'},
-            'aqualzoo': {'category_id': self.cat.CAT, 'name': 'Kot', 'type': 'withdrawal', 'description': 'Aqua'},
-            'aquaelzoo': {'category_id': self.cat.CAT, 'name': 'Kot', 'type': 'withdrawal', 'description': 'Aqua'},
-            'zoo': {'category_id': self.cat.CAT, 'name': 'Kot', 'type': 'withdrawal', 'description': 'Zoo'},
-
-            # Spożywcze
-            'zakupy spożywcze': {'category_id': self.cat.GROCERIES, 'name': 'Spożywcze', 'type': 'withdrawal'},
-            'spożywcze': {'category_id': self.cat.GROCERIES, 'name': 'Spożywcze', 'type': 'withdrawal'},
-
-            # Subskrypcje
-            'google youtube': {'category_id': self.cat.SUBSCRIPTIONS, 'name': 'Subskrypcje', 'type': 'withdrawal', 'description': 'Google'},
-            'disney': {'category_id': self.cat.SUBSCRIPTIONS, 'name': 'Subskrypcje', 'type': 'withdrawal', 'description': 'Disney'},
-            'anthropic': {'category_id': self.cat.SUBSCRIPTIONS, 'name': 'Subskrypcje', 'type': 'withdrawal', 'description': 'Claude'},
-            'claude': {'category_id': self.cat.SUBSCRIPTIONS, 'name': 'Subskrypcje', 'type': 'withdrawal', 'description': 'Claude'},
-
-            # Opłaty bankowe
-            'opłaty bankowe': {'category_id': self.cat.BANK_FEES, 'name': 'Opłaty Bankowe', 'type': 'withdrawal'},
-            'opłata mies. karta': {'category_id': self.cat.BANK_FEES, 'name': 'Opłaty Bankowe', 'type': 'withdrawal'},
-            'opłata za prowadzenie rachunku': {'category_id': self.cat.BANK_FEES, 'name': 'Opłaty Bankowe', 'type': 'withdrawal'},
-            'opłata za kartę': {'category_id': self.cat.BANK_FEES, 'name': 'Opłaty Bankowe', 'type': 'withdrawal'},
-            'pozostałe wydatki': {'category_id': self.cat.BANK_FEES, 'name': 'Opłaty Bankowe', 'type': 'withdrawal'},
-
-            # Podatek Belki / OBC.PODATEK
-            'obc.podatek': {'category_id': self.cat.TAX_BELKA, 'name': 'Podatek', 'type': 'withdrawal', 'description': 'Podatek Belki'},
-            'obc. podatek': {'category_id': self.cat.TAX_BELKA, 'name': 'Podatek', 'type': 'withdrawal', 'description': 'Podatek Belki'},
-            'podatek belki': {'category_id': self.cat.TAX_BELKA, 'name': 'Podatek', 'type': 'withdrawal', 'description': 'Podatek Belki'},
-
-            # Inne
-            'putka ogrodnicza': {'category_id': self.cat.GROCERIES, 'name': 'Spożywcze', 'type': 'withdrawal', 'description': 'Piekarnia'},
-            '800 plus': {'category_id': self.cat.PLUS_800, 'name': '800 plus', 'type': 'deposit'},
-            'przelew na telefon': {'category_id': self.cat.PHONE_TRANSFER, 'name': 'Dofinansowanie', 'type': 'deposit'},
-
-            # Odsetki / Zyski kapitałowe
-            'odsetki': {'category_id': self.cat.SMART_SAVER, 'name': 'SmartSaver', 'type': 'deposit', 'description': 'Odsetki'},
-            'nacalone odsetki': {'category_id': self.cat.SMART_SAVER, 'name': 'SmartSaver', 'type': 'deposit', 'description': 'Odsetki'},
-            'przychód odsetki': {'category_id': self.cat.SMART_SAVER, 'name': 'SmartSaver', 'type': 'deposit', 'description': 'Odsetki'},
-            'naliczone przychód odsetki': {'category_id': self.cat.INTEREST_CAPITAL, 'name': 'Odsetki od kapitału', 'type': 'deposit', 'description': 'Odsetki od kapitału'},
-            'przychód odsetki': {'category_id': self.cat.INTEREST_CAPITAL, 'name': 'Odsetki od kapitału', 'type': 'deposit', 'description': 'Odsetki od kapitału'},
-
-            # Restauracje i gastronomia
-            'glovo': {'category_id': self.cat.RESTAURANT, 'name': 'Restauracja', 'type': 'withdrawal'},
-            'glovoapp.com': {'category_id': self.cat.RESTAURANT, 'name': 'Restauracja', 'type': 'withdrawal'},
-            'mcdonalds': {'category_id': self.cat.RESTAURANT, 'name': 'Restauracja', 'type': 'withdrawal', 'description': 'McDonald\'s'},
-            'mc donalds': {'category_id': self.cat.RESTAURANT, 'name': 'Restauracja', 'type': 'withdrawal', 'description': 'McDonald\'s'},
-            'rozrywka': {'category_id': self.cat.MISC, 'name': 'Szpargały', 'type': 'withdrawal'},  # fallback
-            'restauracja': {'category_id': self.cat.RESTAURANT, 'name': 'Restauracja', 'type': 'withdrawal'},
-            'fast food': {'category_id': self.cat.RESTAURANT, 'name': 'Restauracja', 'type': 'withdrawal'},
-            'kuchnia': {'category_id': self.cat.RESTAURANT, 'name': 'Restauracja', 'type': 'withdrawal'},
-
-            # Subskrypcje / Media
-            'polsat': {'category_id': self.cat.SUBSCRIPTIONS, 'name': 'Subskrypcje', 'type': 'withdrawal', 'description': 'Polsat Box'},
-            'polsatboxgo': {'category_id': self.cat.SUBSCRIPTIONS, 'name': 'Subskrypcje', 'type': 'withdrawal', 'description': 'Polsat Box'},
-            'polsatboxgo.pl': {'category_id': self.cat.SUBSCRIPTIONS, 'name': 'Subskrypcje', 'type': 'withdrawal', 'description': 'Polsat Box'},
-
-            # Ubezpieczenia / Finanse
-            'składka': {'category_id': self.cat.BANK_FEES, 'name': 'Opłaty Bankowe', 'type': 'withdrawal', 'description': 'Składka ubezpieczeniowa'},
-            'pzu': {'category_id': self.cat.BANK_FEES, 'name': 'Opłaty Bankowe', 'type': 'withdrawal', 'description': 'PZU'},
-        }
-
-        self.keywords = self.CATEGORY_KEYWORDS.copy()
+        # Load keywords from JSON file
+        self.keywords = self._load_keywords_from_json()
         if custom_keywords:
             self.keywords.update(custom_keywords)
 
@@ -128,6 +42,98 @@ class CategoryClassifier:
             self.keywords.items(),
             key=lambda x: -len(x[0])
         )
+
+    def _load_keywords_from_json(self) -> Dict:
+        """Load category keywords from JSON config file."""
+        json_path = Path(__file__).parent / "category_keywords.json"
+        if json_path.exists():
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                # Map string category IDs to actual integer IDs from settings
+                cat_id_map = {
+                    'SMART_SAVER': self.cat.SMART_SAVER,
+                    'HAZARD': self.cat.HAZARD,
+                    'TRANSFER': self.cat.TRANSFER,
+                    'MISC': self.cat.MISC,
+                    'ELECTRONICS': self.cat.ELECTRONICS,
+                    'LOAN': self.cat.LOAN,
+                    'CLOTHING': self.cat.CLOTHING,
+                    'HOUSEHOLD_CHEMICALS': self.cat.HOUSEHOLD_CHEMICALS,
+                    'GROCERIES': self.cat.GROCERIES,
+                    'CAT': self.cat.CAT,
+                    'SUBSCRIPTIONS': self.cat.SUBSCRIPTIONS,
+                    'BANK_FEES': self.cat.BANK_FEES,
+                    'TAX_BELKA': self.cat.TAX_BELKA,
+                    'PLUS_800': self.cat.PLUS_800,
+                    'PHONE_TRANSFER': self.cat.PHONE_TRANSFER,
+                    'FIXED_FEES': self.cat.FIXED_FEES,
+                    'INTEREST_CAPITAL': self.cat.INTEREST_CAPITAL,
+                    'RESTAURANT': self.cat.RESTAURANT,
+                    'ACCOUNTING': self.cat.ACCOUNTING,
+                    'INCOME': self.cat.INCOME,
+                }
+
+                # Flatten the structure into simple keyword -> category_info mapping
+                keywords = {}
+                for keyword, cat_info in data.items():
+                    if isinstance(cat_info, dict) and 'category_id' in cat_info:
+                        cat_id_str = cat_info['category_id']
+                        # Resolve string ID to integer
+                        resolved_id = cat_id_map.get(cat_id_str)
+                        if resolved_id is not None:
+                            new_info = cat_info.copy()
+                            new_info['category_id'] = resolved_id
+                            keywords[keyword.lower()] = new_info
+                        else:
+                            logger.warning(f"Unknown category ID: {cat_id_str} for keyword: {keyword}")
+
+                logger.info(f"Loaded {len(keywords)} category keywords from {json_path}")
+                return keywords
+            except Exception as e:
+                logger.error(f"Failed to load category keywords from JSON: {e}")
+        else:
+            logger.warning(f"Category keywords JSON not found at {json_path}")
+
+        # Fallback to minimal hardcoded keywords (for compatibility)
+        return self._get_fallback_keywords()
+
+    def _get_fallback_keywords(self) -> Dict:
+        """Fallback keywords if JSON loading fails."""
+        return {
+            'smart saver': {'category_id': self.cat.SMART_SAVER, 'name': 'SmartSaver', 'type': 'deposit'},
+            'smart': {'category_id': self.cat.SMART_SAVER, 'name': 'SmartSaver', 'type': 'deposit'},
+            'sts.pl': {'category_id': self.cat.HAZARD, 'name': 'Hazard', 'type': 'withdrawal', 'description': 'STS'},
+            'sts': {'category_id': self.cat.HAZARD, 'name': 'Hazard', 'type': 'withdrawal', 'description': 'STS'},
+            'www.sts.pl': {'category_id': self.cat.HAZARD, 'name': 'Hazard', 'type': 'withdrawal', 'description': 'STS'},
+            'transfer wewnętrzny': {'category_id': self.cat.TRANSFER, 'name': 'Transfer', 'type': 'transfer', 'description': 'Transfer'},
+            'przelew własny': {'category_id': self.cat.TRANSFER, 'name': 'Transfer', 'type': 'transfer', 'description': 'Transfer'},
+            'własny': {'category_id': self.cat.TRANSFER, 'name': 'Transfer', 'type': 'transfer', 'description': 'Transfer'},
+            'tedi': {'category_id': self.cat.MISC, 'name': 'Szpargały', 'type': 'withdrawal', 'description': 'TEDI'},
+            'vinted': {'category_id': self.cat.CLOTHING, 'name': 'Ubrania', 'type': 'withdrawal', 'description': 'Vinted'},
+            'rossmann': {'category_id': self.cat.HOUSEHOLD_CHEMICALS, 'name': 'Chemia domowa i środki higieniczne', 'type': 'withdrawal', 'description': 'Rossmann'},
+            'spar': {'category_id': self.cat.GROCERIES, 'name': 'Spożywcze', 'type': 'withdrawal', 'description': 'Spar'},
+            'lidl': {'category_id': self.cat.GROCERIES, 'name': 'Spożywcze', 'type': 'withdrawal', 'description': 'Lidl'},
+            'auchan': {'category_id': self.cat.GROCERIES, 'name': 'Spożywcze', 'type': 'withdrawal', 'description': 'Auchan'},
+            'glovo': {'category_id': self.cat.RESTAURANT, 'name': 'Restauracja', 'type': 'withdrawal', 'description': 'Glovo'},
+            'glovoapp.com': {'category_id': self.cat.RESTAURANT, 'name': 'Restauracja', 'type': 'withdrawal', 'description': 'Glovo'},
+            'składka ubezpieczeń zus': {'category_id': self.cat.ACCOUNTING, 'name': 'Opodatkowanie pracy', 'type': 'withdrawal', 'description': 'ZUS'},
+            'składka zus': {'category_id': self.cat.ACCOUNTING, 'name': 'Opodatkowanie pracy', 'type': 'withdrawal', 'description': 'ZUS'},
+            'zus': {'category_id': self.cat.ACCOUNTING, 'name': 'Opodatkowanie pracy', 'type': 'withdrawal', 'description': 'ZUS'},
+            'spłata karty': {'category_id': self.cat.LOAN, 'name': 'Pożyczka', 'type': 'withdrawal', 'description': 'Spłata karty'},
+            'księgowość': {'category_id': self.cat.ACCOUNTING, 'name': 'Opodatkowanie pracy', 'type': 'withdrawal', 'description': 'Księgowość-Monika Kutnik'},
+            'usługi księgowe': {'category_id': self.cat.ACCOUNTING, 'name': 'Opodatkowanie pracy', 'type': 'withdrawal', 'description': 'Księgowość-Monika Kutnik'},
+            'monika kutnik': {'category_id': self.cat.ACCOUNTING, 'name': 'Opodatkowanie pracy', 'type': 'withdrawal', 'description': 'Księgowość-Monika Kutnik'},
+            'pit': {'category_id': self.cat.ACCOUNTING, 'name': 'Opodatkowanie pracy', 'type': 'withdrawal', 'description': 'PIT'},
+            'pit-2': {'category_id': self.cat.ACCOUNTING, 'name': 'Opodatkowanie pracy', 'type': 'withdrawal', 'description': 'PIT'},
+            'vat': {'category_id': self.cat.ACCOUNTING, 'name': 'Opodatkowanie pracy', 'type': 'withdrawal', 'description': 'VAT'},
+            't-mobile': {'category_id': self.cat.INCOME, 'name': 'Dochód', 'type': 'deposit', 'description': 'T-MOBILE POLSKA'},
+            'bnpp': {'category_id': self.cat.INCOME, 'name': 'Dochód', 'type': 'deposit', 'description': 'BNP Paribas'},
+            'bnpparibas': {'category_id': self.cat.INCOME, 'name': 'Dochód', 'type': 'deposit', 'description': 'BNP Paribas'},
+            'świadczeniodawca': {'category_id': self.cat.INCOME, 'name': 'Dochód', 'type': 'deposit', 'description': 'Dochód'},
+            'dochód': {'category_id': self.cat.INCOME, 'name': 'Dochód', 'type': 'deposit', 'description': 'Dochód'},
+        }
 
     def classify(self, description: str, category_name: str = "") -> Optional[Dict]:
         """
