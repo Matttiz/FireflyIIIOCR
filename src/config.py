@@ -68,6 +68,9 @@ class CategorySettings(BaseSettings):
     # Dochody / Incomes
     INCOME: int = 23
 
+    # Sport
+    SPORT: int = 34
+
 
 class AccountSettings(BaseSettings):
     """Ustawienia kont domyślnych."""

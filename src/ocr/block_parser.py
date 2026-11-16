@@ -44,9 +44,10 @@ class BlockTransactionParser:
         # a wartość musi być seguida przez 'PLN' (nie samo spacje koniec linii)
         # Używamy finditer i bierzemy ostatni match (który zawiera PLN), żeby uniknąć fałszowych dopasowań np. '01' z numeru karty
         # Obsługuje spacje jako separator tysięcy: 20 664,00 PLN
-        # OBSŁUGA KWOT BEZ ZNAKU (dla linii z "Wydatek"/"Wpływ"/"Nie analizuj" gdziekolwiek w linii)
+        # Wzorzec musi matchować ostatnią kwotę przed PLN (żeby nie matchować numeru karty)
         self.amount_pattern = re.compile(r'(?:^|\s)([+\-—–]+)\s*([\d\s]+(?:[.,]\d{2})?)\s*PLN')
-        self.amount_pattern_no_sign = re.compile(r'(?:Wydatek|Wpływ|Nie analizuj).*?([\d\s]+(?:[.,]\d{2})?)\s*PLN', re.IGNORECASE)
+        # OBSŁUGA KWOT BEZ ZNAKU (dla linii z "Wydatek"/"Wpływ"/"Nie analizuj"/"Płatność" gdziekolwiek w linii)
+        self.amount_pattern_no_sign = re.compile(r'(?:Wydatek|Wpływ|Nie analizuj|Płatność).*?([\d\s]+(?:[.,]\d{2})?)\s*PLN', re.IGNORECASE)
 
         # Prefiksy dni (z kropkami i bez)
         self.day_prefixes = ['Wczoraj', 'Dziś', 'Pn', 'Pn.', 'Wt', 'Wt.', 'Śr', 'Śr.', 'Cz', 'Cz.', 'Pt', 'Pt.', 'Pi', 'Pi.', 'Sb', 'Sb.', 'Nd', 'Nd.',
@@ -126,18 +127,46 @@ class BlockTransactionParser:
                     'Wydatki podstawowe', 'Zdrowie i uroda', 'Opłata Finanse',
                     'Dom i rachunki'
                 ])
-                # Jeśli mamy pending date line, POŁĄCZ ZAWSZE (nawet jeśli to kategoria bankowa)
+                # Bank category lines (Rozrywka, Spożywcze, Wydatki podstawowe, etc.)
+                # are metadata for the PREVIOUS transaction - should be appended to current block
+                # NOT combined with pending_date_line (which would create a fake transaction)
+                if is_bank_category:
+                    # To kategoria bankowa / saldo - dodaj do opisu aktualnego bloku
+                    if current_block:
+                        current_block.append(line)
+                    else:
+                        # Nie ma current_block - to metadata do PRZYSZŁEJ transakcji
+                        # WAŻNE: Jeśli mamy pending_date_line, dodaj GO TEŻ do pre_header_lines,
+                        # bo to jest pre-header dla PRZYSZŁEJ transakcji (zawiera konto itp.)
+                        # Ale nie twórz z niego nowej transakcji (pending_date_line nie ma kwoty)
+                        if pending_date_line:
+                            pre_header_lines.append(pending_date_line)
+                            pending_date_line = ""
+                        pre_header_lines.append(line)
+                    continue
+
+                # Also check if this looks like a SALDO line (has TWO amounts: transaction + balance)
+                # e.g., "Wydatki podstawowe -8,09 PLN 264,92 PLN" - two PLN in one line
+                pln_count = line.count('PLN')
+                if pln_count >= 2:
+                    # Likely a saldo line with balance - treat as bank category
+                    if current_block:
+                        current_block.append(line)
+                    else:
+                        # Jeśli mamy pending_date_line, dodaj GO TEŻ do pre_header_lines
+                        if pending_date_line:
+                            pre_header_lines.append(pending_date_line)
+                            pending_date_line = ""
+                        pre_header_lines.append(line)
+                    continue
+
+                # Jeśli mamy pending date line I to NIE kategoria bankowa, POŁĄCZ
                 if pending_date_line:
                     combined_line = pending_date_line + " " + line
                     pending_date_line = ""
                     line = combined_line
                     has_day_date = True
                     is_new_transaction = True
-                elif is_bank_category:
-                    # To kategoria bankowa / saldo - dodaj do opisu aktualnego bloku
-                    if current_block:
-                        current_block.append(line)
-                    continue
                 else:
                     pending_amount_line = line
                     continue
@@ -258,12 +287,24 @@ class BlockTransactionParser:
         # Wyciągnij kwotę ze znakiem
         amount_match = self.amount_pattern.search(main_line)
         if not amount_match:
-            return None
+            # Spróbuj wzorzec bez znaku (dla linii z "Płatność", "Wydatek" itp.)
+            amount_match = self.amount_pattern_no_sign.search(main_line)
+            if not amount_match:
+                return None
+            # Dla wzorca bez znaku, znak musi zostać wywnioskowany z kontekstu
+            # Domyślnie withdrawal dla "Wydatek"/"Płatność", deposit dla "Wpływ"
+            amount_value_str = amount_match.group(1)
+            main_lower = main_line.lower()
+            if 'wpływ' in main_lower:
+                sign = '+'
+            else:
+                sign = '-'
+            amount_val = float(amount_value_str.replace(' ', '').replace(',', '.'))
+        else:
+            amount_sign_raw = amount_match.group(1)
+            amount_value_str = amount_match.group(2)
 
-        amount_sign_raw = amount_match.group(1)
-        amount_value_str = amount_match.group(2)
-
-        sign, amount_val = TransactionTypeResolver.resolve_from_amount(amount_sign_raw + amount_value_str)
+            sign, amount_val = TransactionTypeResolver.resolve_from_amount(amount_sign_raw + amount_value_str)
 
         # Opis z głównej linii (przed kwotą)
         desc_part1 = main_line[:amount_match.start()].strip()

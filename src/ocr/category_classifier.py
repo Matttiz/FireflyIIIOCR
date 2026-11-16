@@ -73,6 +73,7 @@ class CategoryClassifier:
                     'RESTAURANT': self.cat.RESTAURANT,
                     'ACCOUNTING': self.cat.ACCOUNTING,
                     'INCOME': self.cat.INCOME,
+                    'SPORT': self.cat.SPORT,
                 }
 
                 # Flatten the structure into simple keyword -> category_info mapping
@@ -162,12 +163,18 @@ class CategoryClassifier:
         # 2. Sprawdź w opisie (najdłuższe klucze pierwsze)
         for keyword, cat_info in self._sorted_keywords:
             if keyword in desc_lower:
-                result = cat_info.copy()
+                # Zwracamy category_id, name, type oraz description (jeśli istnieje w konfiguracji).
+                # Description z konfiguracji to czysty opis handlowca (np. "Rossmann", "Aqua") który nadpisuje surowy OCR.
+                result = {
+                    'category_id': cat_info['category_id'],
+                    'name': cat_info['name'],
+                    'type': cat_info['type'],
+                }
                 if 'description' in cat_info:
                     result['description'] = cat_info['description']
                 logger.debug(f"Kategoryzacja: '{keyword}' -> {cat_info['name']} (id={cat_info['category_id']})")
 
-                # Dla STS dodaj numer transakcji do opisu
+                # Dla STS dodaj numer transakcji do opisu (specjalny przypadek - chcemy dodać numer)
                 if keyword in ('sts.pl', 'sts', 'www.sts.pl'):
                     match = STS_TRANSACTION_PATTERN.search(description)
                     if match:

@@ -207,6 +207,28 @@ class FireflyApiClient:
                     pass
         return latest_dt
 
+    def get_global_latest_transaction(self, data_dir: Optional[Path] = None) -> Optional[Dict]:
+        """
+        Pobiera bezwzględnie najnowszą transakcję ze wszystkich kont z cache.
+        Zwraca pełny słownik transakcji (datetime, source_id, destination_id, description, category_id, amount, type) lub None.
+        """
+        if not self._transactions_cache:
+            return None
+
+        latest_dt = None
+        latest_trans = None
+        for trans in self._transactions_cache:
+            trans_date_str = trans.get('date', '')
+            if trans_date_str:
+                try:
+                    trans_dt = datetime.fromisoformat(trans_date_str.replace('Z', '+00:00'))
+                    if latest_dt is None or trans_dt > latest_dt:
+                        latest_dt = trans_dt
+                        latest_trans = trans
+                except:
+                    pass
+        return latest_trans
+
     def get_next_transaction_time(self, account_id: int, target_date: Optional[date] = None, data_dir: Optional[Path] = None) -> datetime:
         """
         Oblicza czas dla nowej transakcji.

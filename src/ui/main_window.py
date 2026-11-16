@@ -2,7 +2,7 @@ import hashlib
 import logging
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,8 @@ from PySide6.QtGui import QGuiApplication, QPixmap, QColor
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTextEdit, QComboBox, QMessageBox,
-    QTableWidget, QTableWidgetItem, QHeaderView, QSplitter
+    QTableWidget, QTableWidgetItem, QHeaderView, QSplitter,
+    QProgressBar
 )
 
 from src.model.transaction import Transaction, Account, Category
@@ -380,6 +381,72 @@ class MainWindow(QMainWindow):
         table_height = self.table_view.height()
         logger.info(f"  TableView: {table_width}x{table_height} (aspect: {table_width/table_height:.2f})")
 
+    def _update_latest_firefly_label(self, trans: Optional[Dict]):
+        """Aktualizuje label z informacją o najnowszej transakcji Firefly"""
+        if not trans:
+            self.latest_firefly_label.setText("Najnowsza transakcja Firefly: brak")
+            return
+
+        # Pobierz datę i czas
+        date_str = ""
+        trans_date_str = trans.get('date', '')
+        if trans_date_str:
+            try:
+                dt = datetime.fromisoformat(trans_date_str.replace('Z', '+00:00'))
+                date_str = dt.strftime('%Y-%m-%d %H:%M')
+            except:
+                date_str = trans_date_str[:16].replace('T', ' ')
+
+        # Pobierz opis
+        description = trans.get('description', 'Brak opisu')
+        if len(description) > 50:
+            description = description[:47] + "..."
+
+        # Pobierz kategorię
+        category_name = "Brak"
+        category_id = trans.get('category_id')
+        if category_id and self.categories:
+            cat_id_str = str(category_id)
+            for cat in self.categories:
+                cat_id = cat.get('id') if isinstance(cat, dict) else cat.id
+                if cat_id is not None and str(cat_id) == cat_id_str:
+                    category_name = cat.get('name', 'Nieznana') if isinstance(cat, dict) else cat.name
+                    break
+
+        # Pobierz konto źródłowe
+        source_name = "Nieznane"
+        source_id = trans.get('source_id')
+        if source_id and self.accounts:
+            source_id_str = str(source_id)
+            for acc in self.accounts:
+                acc_id = acc.get('id') if isinstance(acc, dict) else acc.id
+                if acc_id is not None and str(acc_id) == source_id_str:
+                    source_name = acc.get('name', 'Nieznane') if isinstance(acc, dict) else acc.name
+                    break
+
+        # Pobierz typ
+        trans_type = trans.get('type', '')
+        type_map = {
+            'withdrawal': 'Wypłata',
+            'deposit': 'Wpłata',
+            'transfer': 'Transfer'
+        }
+        type_name = type_map.get(trans_type, trans_type)
+
+        # Kwota
+        amount = trans.get('amount', 0)
+
+        # Zbuduj tekst
+        parts = []
+        if date_str:
+            parts.append(f"📅 {date_str}")
+        parts.append(f"💰 {amount:.2f} PLN ({type_name})")
+        parts.append(f"📝 {description}")
+        parts.append(f"🏷️ {category_name}")
+        parts.append(f"🏦 {source_name}")
+
+        self.latest_firefly_label.setText("  |  ".join(parts))
+
     def _on_text_edit_resize(self, event):
         """Called when TextEdit resizes - logs dimensions"""
         # Call original resize if it was hooked
@@ -424,13 +491,6 @@ class MainWindow(QMainWindow):
         if count > 0:
             logger.info(f"Startup: Refreshed {count} transactions from Firefly API")
 
-        # Pobierz i zaloguj najnowszą transakcję z Firefly przy starcie
-        latest_global = api_client.get_global_latest_transaction_time(data_manager.data_dir)
-        if latest_global:
-            logger.info(f"Startup: Latest global transaction from Firefly: {latest_global.isoformat()}")
-        else:
-            logger.info("Startup: No existing transactions in Firefly cache")
-
         # Znajdź Cash account jako domyślne
         self.default_destination_account_id = 5
         for acc in self.accounts:
@@ -447,6 +507,18 @@ class MainWindow(QMainWindow):
 
         self._setup_ui()
         self._connect_signals()
+
+        # Pobierz i zaloguj najnowszą transakcję z Firefly przy starcie (po _setup_ui, żeby label istniał)
+        latest_global = api_client.get_global_latest_transaction_time(data_manager.data_dir)
+        if latest_global:
+            logger.info(f"Startup: Latest global transaction from Firefly: {latest_global.isoformat()}")
+            # Pobierz pełną transakcję dla UI
+            latest_trans = api_client.get_global_latest_transaction(data_manager.data_dir)
+            self._update_latest_firefly_label(latest_trans)
+        else:
+            logger.info("Startup: No existing transactions in Firefly cache")
+            self.latest_firefly_label.setText("Najnowsza transakcja Firefly: brak")
+
         # Log main window initial layout
         self._log_initial_layout()
 
@@ -457,6 +529,18 @@ class MainWindow(QMainWindow):
         self.image_label.setScaledContents(False)
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setStyleSheet("QLabel { border: 1px solid gray; padding: 8px; }")
+
+        # Progress bar for OCR
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setRange(0, 0)  # Indeterminate progress
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setFormat("Przetwarzanie...")
+
+        # Latest Firefly transaction info
+        self.latest_firefly_label = QLabel("Najnowsza transakcja Firefly: ładuję...")
+        self.latest_firefly_label.setStyleSheet("QLabel { color: #666; font-size: 11px; padding: 4px; }")
+        self.latest_firefly_label.setWordWrap(True)
 
         self.status = QLabel("Oczekiwanie na obraz…")
 
@@ -499,6 +583,8 @@ class MainWindow(QMainWindow):
         image_status_panel = QWidget()
         image_layout = QVBoxLayout()
         image_layout.addWidget(self.image_label)
+        image_layout.addWidget(self.progress_bar)
+        image_layout.addWidget(self.latest_firefly_label)
         image_layout.addWidget(self.status)
         image_layout.addLayout(button_layout)
         image_status_panel.setLayout(image_layout)
@@ -578,6 +664,8 @@ class MainWindow(QMainWindow):
             return
 
         self.status.setText("Rozpoczynam OCR...")
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setFormat("Rozpoznawanie tekstu (OCR)...")
         QApplication.processEvents()
 
         # Get PSM from config (default 12)
@@ -588,6 +676,7 @@ class MainWindow(QMainWindow):
 
         self.text_edit.setPlainText("\n".join(lines))
         self.status.setText(f"OCR zakończony. Rozpoznano {len(lines)} wierszy (PSM: {psm}).")
+        self.progress_bar.setVisible(False)
         self.analyze_button.setEnabled(True)
 
     def analyze_transactions(self):
@@ -605,6 +694,9 @@ class MainWindow(QMainWindow):
         count = self.api_client.refresh_transactions_from_api(limit=500)
         if count > 0:
             logger.info(f"Analiza: Odświeżono {count} transakcji z Firefly API")
+            # Update latest transaction info in UI
+            latest_trans = self.api_client.get_global_latest_transaction(self.data_manager.data_dir)
+            self._update_latest_firefly_label(latest_trans)
 
         # Parse
         parsed = self.transaction_parser.parse_blocks(lines)

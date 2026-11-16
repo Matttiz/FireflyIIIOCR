@@ -21,7 +21,7 @@ def load_accounts() -> list:
         {'id': 3, 'name': 'Millennium', 'type': 'asset'},
         {'id': 4, 'name': 'KONTO Direct', 'type': 'asset'},
         {'id': 5, 'name': 'Smart Saver', 'type': 'asset'},
-        {'id': 6, 'name': 'KONTO Komfort', 'type': 'asset'},
+        {'id': 6, 'name': 'ING Bank Śląski  Komfort (Wspólne)', 'type': 'asset'},  # Shared ING account (note double space)
         {'id': 7, 'name': 'ING Bank Śląski Firmowe', 'type': 'asset'},  # Firm account
         {'id': 8, 'name': 'Cash account', 'type': 'asset'},
         {'id': 13, 'name': 'BNPPL (Świadczeniodawca)', 'type': 'revenue'},  # Revenue account for income
