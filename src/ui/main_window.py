@@ -27,6 +27,7 @@ from src.services.transaction_services import (
     TransactionValidator
 )
 from src.ui.transaction_dialog import TransactionDialog
+from src.ui.rule_manager_dialog import RuleManagerDialog
 
 
 class ClipboardWatcher(QObject):
@@ -560,11 +561,15 @@ class MainWindow(QMainWindow):
         self.analyze_button.setEnabled(False)
         self.create_button = QPushButton("Stwórz zaznaczone")
         self.create_button.setEnabled(False)
+        self.rules_button = QPushButton("Zarządzaj regułami")
+        self.rules_button.clicked.connect(self._open_rules_manager)
 
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.ocr_button)
         button_layout.addWidget(self.analyze_button)
         button_layout.addWidget(self.create_button)
+        button_layout.addStretch()
+        button_layout.addWidget(self.rules_button)
 
         # Text and table split
         self.table_view = TransactionTableView()
@@ -810,7 +815,7 @@ class MainWindow(QMainWindow):
             self
         )
         if dialog.exec():
-            updated = dialog.get_transaction()
+            updated, changes = dialog.get_transaction()
             trans.date = updated.date
             trans.amount = updated.amount
             trans.description = updated.description
@@ -818,7 +823,221 @@ class MainWindow(QMainWindow):
             trans.category_id = updated.category_id
             trans.transaction_type = updated.transaction_type
             trans.destination_id = updated.destination_id
+
+            # NAUKA: jeśli zmieniono kategorię, zaproponuj naukę reguły
+            if 'category_id' in changes:
+                self._offer_learn_category_rule(trans, changes['category_id'])
+
+            # NAUKA: jeśli zmieniono konto źródłowe lub docelowe
+            if 'source_id' in changes:
+                self._offer_learn_account_rule(trans, changes['source_id'], 'source')
+            if 'destination_id' in changes:
+                self._offer_learn_account_rule(trans, changes['destination_id'], 'destination')
+
             self.table_view.display_transactions(self.parsed_transactions)
+
+    def _open_rules_manager(self):
+        """Otwiera dialog menedżera reguł"""
+        dialog = RuleManagerDialog(self)
+        dialog.exec()
+        # Reload classifiers after potential changes
+        # (they auto-reload from JSON on next use since they read from file)
+
+    def _offer_learn_category_rule(self, trans: Transaction, new_category_id: int):
+        """Proponuje naukę nowej reguły kategoryzacji na podstawie zmiany kategorii"""
+
+        # 1. Znajdź obiekt kategorii po ID (dla nazwy w komunikacie)
+        cat_name = "Nieznana"
+        for cat in self.categories:
+            cat_id = cat.get('id') if isinstance(cat, dict) else cat.id
+            if cat_id is not None and str(cat_id) == str(new_category_id):
+                cat_name = cat.get('name', 'Nieznana') if isinstance(cat, dict) else cat.name
+                break
+
+        # 2. Wyciągnij propozycję słowa kluczowego z opisu
+        keyword = self._extract_keyword_from_description(trans.description)
+
+        if not keyword or len(keyword) < 3:
+            return  # Za krótkie, nie ma sensu
+
+        # 3. Sprawdź czy reguła już istnieje (unikaj duplikatów)
+        classifier = self.transaction_parser.category_classifier
+        if keyword.lower() in classifier.keywords:
+            return  # Już jest
+
+        # 4. Zapytaj użytkownika
+        from PySide6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(
+            self,
+            "Nauka nowej reguły",
+            f"Dodać regułę kategoryzacji?\n\n"
+            f"Słowo kluczowe: «{keyword}»\n"
+            f"Kategoria: {cat_name}\n\n"
+            f"Przy następnym skanowaniu transakcje zawierające «{keyword}»\n"
+            f"będą automatycznie kategoryzowane jako {cat_name}.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            # 5. Zapisz przez klasyfikator
+            cat_info = {
+                'category_id': new_category_id,
+                'name': cat_name,
+                'type': 'withdrawal' if trans.transaction_type == 'withdrawal' else 'deposit',
+                'description': keyword.capitalize()  # czysta nazwa handlowca
+            }
+            classifier.save_keyword(keyword, cat_info)
+            QMessageBox.information(self, "Zapisano", f"Reguła «{keyword}» -> {cat_name} została dodana.")
+
+    def _offer_learn_account_rule(self, trans: Transaction, new_account_id: int, account_type: str):
+        """Proponuje naukę nowej reguły konta na podstawie zmiany konta"""
+
+        # 1. Znajdź nazwę konta po ID
+        acc_name = "Nieznane"
+        for acc in self.accounts:
+            acc_id = acc.get('id') if isinstance(acc, dict) else acc.id
+            if acc_id is not None and str(acc_id) == str(new_account_id):
+                acc_name = acc.get('name', 'Nieznane') if isinstance(acc, dict) else acc.name
+                break
+
+        # 2. Wyciągnij propozycję słowa kluczowego dla konta z opisu
+        keyword = self._extract_account_keyword_from_description(trans.description)
+
+        if not keyword or len(keyword) < 3:
+            return
+
+        # 3. Sprawdź czy reguła już istnieje
+        matcher = self.transaction_parser.account_matcher
+        if keyword.lower() in matcher.account_keywords:
+            return
+
+        # 4. Zmapuj numeryczne ID na string ID (dla JSON)
+        account_id_str = self._map_account_id_to_str(new_account_id)
+        if not account_id_str:
+            return
+
+        # 5. Zapytaj użytkownika
+        from PySide6.QtWidgets import QMessageBox
+        account_label = "źródłowe" if account_type == 'source' else "docelowe"
+        reply = QMessageBox.question(
+            self,
+            "Nauka nowej reguły konta",
+            f"Dodać regułę dopasowania konta {account_label}?\n\n"
+            f"Słowo kluczowe: «{keyword}»\n"
+            f"Konto {account_label}: {acc_name}\n\n"
+            f"Przy następnym skanowaniu transakcje zawierające «{keyword}»\n"
+            f"będą automatycznie dopasowywane do konta {acc_name}.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            matcher.save_keyword(keyword, account_id_str)
+            QMessageBox.information(self, "Zapisano", f"Reguła konta «{keyword}» -> {acc_name} została dodana.")
+
+    def _map_account_id_to_str(self, account_id: int) -> str:
+        """Mapuje numeryczne ID konta na string ID używany w JSON."""
+        # Use the account matcher's internal mapping
+        matcher = self.transaction_parser.account_matcher
+        for str_id, num_id in matcher._account_id_to_str.items():
+            if num_id == account_id:
+                return str_id
+        return None
+
+    def _extract_account_keyword_from_description(self, description: str) -> str:
+        """Ekstrahuje słowo kluczowe dla konta z opisu OCR (np. 'direct', 'komfort', '4246')"""
+        import re
+
+        # Znane wzorce kont
+        account_patterns = [
+            (r'\b(direct)\b', 'direct'),
+            (r'\b(komfort\s*wsp[oó]lne|komfort\s*wspolne|ing\s*komfort)\b', 'komfort wspólne'),
+            (r'\b(komfort)\b', 'komfort'),
+            (r'\b(smart\s*saver|smartsaver)\b', 'smart saver'),
+            (r'\b(millennium)\b', 'millennium'),
+            (r'\b(ing\s*visa|karta\s*wirtualna\s*ing|ing\s*virtualna)\b', 'ing visa'),
+            (r'\b(4246)\b', '4246'),
+            (r'\b(visa)\b', 'visa'),
+            (r'\b(mastercard)\b', 'mastercard'),
+            (r'\b(cash|got[oó]wka)\b', 'cash'),
+        ]
+
+        desc_lower = description.lower()
+
+        # Sprawdź znane wzorce
+        for pattern, keyword in account_patterns:
+            if re.search(pattern, desc_lower, re.IGNORECASE):
+                return keyword
+
+        return ""
+
+    def _extract_keyword_from_description(self, description: str) -> str:
+        """Ekstrahuje nazwę handlowca z opisu OCR"""
+        import re
+
+        # Prefiksy dni do odfiltrowania (z kropkami i bez)
+        day_prefixes = {
+            'wczoraj', 'dzis', 'pn', 'wt', 'sr', 'cz', 'pt', 'pi', 'sb', 'nd',
+            'pon', 'wto', 'sro', 'czw', 'pia', 'sob', 'nie',
+            'pn.', 'wt.', 'sr.', 'cz.', 'pt.', 'pi.', 'sb.', 'nd.',
+            'pon.', 'wto.', 'sro.', 'czw.', 'pia.', 'sob.', 'nie.',
+            'śr', 'śr.', 'śro', 'śro.',
+        }
+
+        # Słowa do odfiltrowania (bankowe kategorie, skróty ulic, artefakty OCR)
+        stop_words = {
+            'wydatki', 'podstawowe', 'rozrywka', 'podroze', 'podróże', 'zdrowie', 'uroda',
+            'opłata', 'finanse', 'dom', 'rachunki', 'spożywcze', 'pozostałe', 'nie', 'analizuj',
+            'ul', 'ul.', 'ulica', 'al', 'al.', 'aleja', 'pl', 'pl.', 'plac',
+            'o0', 'ce', 'it', 'nr', 'blik', 'karty', 'transakcji', 'płatność', 'płatnosc',
+            'przelew', 'wewnętrzny', 'własny', 'viza', 'visa', 'mastercard', 'maestro',
+            'grodzisk', 'mazowiecki', 'warszawa', 'katowice', 'pol', 'mazo', 'mazovian',
+            'blokada', 'konto', 'konta', 'kartą', 'mies', 'mies.', 'karta', 'okres', 'od', 'do',
+            'e', 'a', 'o', 'z', 'w', 'na', 'dla', 'the', 'and', 'or', 'of', 'in', 'for',
+            'porcelanowa', 'ul', 'ul.', 'ulica',
+            'millennium', 'smart', 'saver', 'direct', 'komfort', 'ing', 'śląski',
+            'blokada:', '10)', 'www.sts.pl', 'zbliż.', '29.08', '28.09', '3,89',
+            '3.89', '29', '08', '09', '4246xx', '1756', '8124',
+        }
+
+        # Wykorzystaj czyszczenie z AccountMatcher (lepsze usuwanie artefaktów)
+        cleaned = self._clean_ocr_artifacts_for_keyword(description)
+
+        # Dodatkowe usuwanie dat, kwot, BLIK
+        cleaned = re.sub(r'\d{2}[./-]\d{2}[./-]\d{2,4}', '', cleaned)
+        cleaned = re.sub(r'[\d\s]+[.,]\d{2}\s*PLN', '', cleaned)
+        cleaned = re.sub(r'Nr\s+(karty|transakcji)\s+\S+', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\b(BLIK|kartą|płatność|przelew)\b', '', cleaned, flags=re.IGNORECASE)
+
+        # Weź pierwsze 1-2 znaczące słowa (>2 znaki, nie cyfry, nie prefiksy dni, nie stop words)
+        words = [w for w in cleaned.split() if len(w) > 2 and not w.isdigit() and w.lower() not in day_prefixes and w.lower() not in stop_words]
+        if not words:
+            return ""
+
+        # Jeśli drugie słowo to stop word — pomiń, weź pierwsze
+        keyword = words[0]
+        if len(words) > 1 and words[1].lower() not in stop_words:
+            keyword += " " + words[1]
+
+        return keyword.strip().lower()
+
+    def _clean_ocr_artifacts_for_keyword(self, text: str) -> str:
+        """Czyści typowe artefakty OCR - kopia logiki z AccountMatcher._clean_ocr_artifacts"""
+        import re
+        patterns = [
+            r'\s*\[\w\)\s*',   # [M) lub [A) itp.
+            r'\s*\[\w\s*',     # [a lub [A lub [X (litera + opcjonalna spacja)
+            r'\s*\(\w\)\s*',   # (M) itp.
+            r'\s*\d+\)\s*',    # 10) 20) itp.
+            r'\s*\d+\]\s*',    # 10] itp.
+            r'\s*\[\d+\]\s*',  # [10] itp.
+        ]
+        for pattern in patterns:
+            text = re.sub(pattern, ' ', text)
+        # Usuń wielokrotne spacje
+        text = re.sub(r'\s+', ' ', text)
+        return text.strip()
 
     def create_selected_transactions(self):
         transactions_to_create = self.table_view.get_checked_transactions()

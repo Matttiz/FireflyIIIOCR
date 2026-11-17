@@ -76,6 +76,9 @@ class CategoryClassifier:
                     'SPORT': self.cat.SPORT,
                 }
 
+                # Store reverse map for saving (int ID -> string key)
+                self._cat_id_to_str = {v: k for k, v in cat_id_map.items()}
+
                 # Flatten the structure into simple keyword -> category_info mapping
                 keywords = {}
                 for keyword, cat_info in data.items():
@@ -96,6 +99,31 @@ class CategoryClassifier:
                 logger.error(f"Failed to load category keywords from JSON: {e}")
         else:
             logger.warning(f"Category keywords JSON not found at {json_path}")
+
+        # Fallback: create reverse map from fallback keywords
+        self._cat_id_to_str = {
+            self.cat.SMART_SAVER: 'SMART_SAVER',
+            self.cat.HAZARD: 'HAZARD',
+            self.cat.TRANSFER: 'TRANSFER',
+            self.cat.MISC: 'MISC',
+            self.cat.ELECTRONICS: 'ELECTRONICS',
+            self.cat.LOAN: 'LOAN',
+            self.cat.CLOTHING: 'CLOTHING',
+            self.cat.HOUSEHOLD_CHEMICALS: 'HOUSEHOLD_CHEMICALS',
+            self.cat.GROCERIES: 'GROCERIES',
+            self.cat.CAT: 'CAT',
+            self.cat.SUBSCRIPTIONS: 'SUBSCRIPTIONS',
+            self.cat.BANK_FEES: 'BANK_FEES',
+            self.cat.TAX_BELKA: 'TAX_BELKA',
+            self.cat.PLUS_800: 'PLUS_800',
+            self.cat.PHONE_TRANSFER: 'PHONE_TRANSFER',
+            self.cat.FIXED_FEES: 'FIXED_FEES',
+            self.cat.INTEREST_CAPITAL: 'INTEREST_CAPITAL',
+            self.cat.RESTAURANT: 'RESTAURANT',
+            self.cat.ACCOUNTING: 'ACCOUNTING',
+            self.cat.INCOME: 'INCOME',
+            self.cat.SPORT: 'SPORT',
+        }
 
         # Fallback to minimal hardcoded keywords (for compatibility)
         return self._get_fallback_keywords()
@@ -193,6 +221,46 @@ class CategoryClassifier:
             self.keywords.items(),
             key=lambda x: -len(x[0])
         )
+
+    def save_keyword(self, keyword: str, category_info: Dict):
+        """
+        Dodaje nowe słowo kluczowe do klasyfikatora I zapisuje do category_keywords.json.
+
+        Args:
+            keyword: Słowo kluczowe (np. 'spar', 't-mobile')
+            category_info: Dict z category_id (int), name, type, opcjonalnie description
+        """
+        keyword = keyword.lower().strip()
+
+        # 1. Aktualizuj pamięć (natychmiast dostępne bez restartu)
+        self.add_keyword(keyword, category_info)
+
+        # 2. Przygotuj wpis do JSON (z stringowym category_id)
+        cat_id_int = category_info['category_id']
+        cat_id_str = self._cat_id_to_str.get(cat_id_int)
+        if not cat_id_str:
+            raise ValueError(f"Nie znaleziono string ID dla category_id={cat_id_int}")
+
+        entry = {
+            'category_id': cat_id_str,
+            'name': category_info['name'],
+            'type': category_info['type'],
+        }
+        if 'description' in category_info:
+            entry['description'] = category_info['description']
+
+        # 3. Załaduj obecny JSON, zaktualizuj, zapisz (atomowo)
+        json_path = Path(__file__).parent / "category_keywords.json"
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        data[keyword] = entry
+
+        # Zapisz z zachowaniem porządku (alfabetycznie dla czytelności)
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(dict(sorted(data.items())), f, ensure_ascii=False, indent=2)
+
+        logger.info(f"Zapisano nową regułę: '{keyword}' -> {cat_id_str} ({category_info['name']})")
 
     def get_all_categories(self) -> List[Dict]:
         """Zwraca listę unikalnych kategorii"""

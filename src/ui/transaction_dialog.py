@@ -33,6 +33,12 @@ class TransactionDialog(QDialog):
             self.setWindowTitle("Edytuj transakcję")
             ok_text = "Zapisz"
 
+        # ZAPISZ ORYGINAŁY do wykrywania zmian
+        self._original_category_id = transaction.category_id
+        self._original_source_id = transaction.source_id
+        self._original_dest_id = transaction.destination_id
+        self._original_type = transaction.transaction_type
+
         layout = QFormLayout()
 
         # Rodzaj transakcji
@@ -143,8 +149,8 @@ class TransactionDialog(QDialog):
         }
         print(f"Body requestu: {json.dumps(body, ensure_ascii=False, indent=2)}")
 
-    def get_transaction(self) -> Transaction:
-        """Zwraca zaktualizowaną transakcję"""
+    def get_transaction(self) -> tuple[Transaction, dict]:
+        """Zwraca (zaktualizowana_transakcja, zmienione_pola)"""
         try:
             amount = float(self.amount_edit.text().replace(',', '.'))
         except:
@@ -155,6 +161,25 @@ class TransactionDialog(QDialog):
         if not isinstance(selected_date, date):
             selected_date = date.today()
 
+        # Wykryj zmiany względem oryginałów
+        changed = {}
+
+        new_cat_id = self.category_combo.currentData()
+        if new_cat_id != self._original_category_id:
+            changed['category_id'] = new_cat_id
+
+        new_src_id = self.source_combo.currentData()
+        if new_src_id != self._original_source_id:
+            changed['source_id'] = new_src_id
+
+        new_dst_id = self.dest_combo.currentData()
+        if new_dst_id != self._original_dest_id:
+            changed['destination_id'] = new_dst_id
+
+        new_type = self.type_combo.currentData()
+        if new_type != self._original_type:
+            changed['transaction_type'] = new_type
+
         return Transaction(
             date=selected_date,
             amount=amount,
@@ -164,4 +189,4 @@ class TransactionDialog(QDialog):
             category_id=self.category_combo.currentData(),
             transaction_type=self.type_combo.currentData(),
             datetime_str=self.datetime_edit.text() if self.datetime_edit.text() != "(będzie wyliczone przy utworzeniu)" else "",
-        )
+        ), changed

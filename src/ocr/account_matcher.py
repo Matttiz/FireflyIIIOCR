@@ -2,7 +2,9 @@
 Account matcher for matching OCR text to Firefly III accounts.
 Extracted from BlockTransactionParser to avoid spaghetti code.
 """
+import json
 import re
+from pathlib import Path
 from typing import Dict, List, Optional
 import logging
 
@@ -16,6 +18,7 @@ class AccountMatcher:
     Dopasowuje nazwy kont z tekstu OCR do kont z Firefly III.
     Obsługuje błędy OCR (np. "KGrta" -> "Karta", "mM-a" -> "").
     Obsługuje dopasowanie po nazwach banków, numerach kart, typach kart.
+    Słowa kluczowe ładowane z pliku JSON (account_keywords.json).
     """
 
     def __init__(self, accounts: List[Dict], account_keywords: Optional[Dict] = None):
@@ -26,7 +29,6 @@ class AccountMatcher:
                 np. {'ing': 1, 'komfort': 1, '4246': 1, 'visa': 1}
         """
         self.accounts = accounts
-        self.account_keywords = account_keywords or {}
         # Przygotuj wersje lowercase do porównania
         self._accounts_lower = [
             {'id': acc['id'], 'name': acc['name'], 'name_lower': acc['name'].lower()}
@@ -34,9 +36,176 @@ class AccountMatcher:
             if acc.get('name')
         ]
 
-        # Zbuduj słownik keywords (jeśli nie podano, wygeneruj z kont)
-        if not self.account_keywords:
-            self._build_keywords()
+        # Reverse map: account_id string -> internal ID (for saving) - MUST be first
+        self._build_account_id_map()
+
+        # Load keywords from JSON file (primary source)
+        self.account_keywords = self._load_keywords_from_json()
+
+        # Add full account names as keywords (specific to user's accounts)
+        for acc in self._accounts_lower:
+            self.account_keywords[acc['name_lower']] = acc['id']
+
+        # Allow override from passed keywords (backward compatibility)
+        if account_keywords:
+            self.account_keywords.update(account_keywords)
+
+    def _build_account_id_map(self):
+        """Buduje mapowanie string account_id -> numeric ID z listy kont."""
+        self._account_id_to_str = {}
+        for acc in self._accounts_lower:
+            name_lower = acc['name'].lower()
+            if 'ing' in name_lower and 'bank' in name_lower:
+                if 'firmowe' in name_lower:
+                    self._account_id_to_str['ING_FIRM'] = acc['id']
+                elif 'wspolne' in name_lower or 'wspólne' in name_lower:
+                    self._account_id_to_str['KOMFORT_WSP'] = acc['id']
+                else:
+                    self._account_id_to_str['ING'] = acc['id']
+            elif 'millennium' in name_lower:
+                self._account_id_to_str['MILLENNIUM'] = acc['id']
+            elif 'pekao' in name_lower:
+                self._account_id_to_str['PEKAO'] = acc['id']
+            elif 'mali' in name_lower or 'mbank' in name_lower:
+                self._account_id_to_str['MALI'] = acc['id']
+            elif 'komfort' in name_lower and 'wspolne' not in name_lower and 'wspólne' not in name_lower:
+                self._account_id_to_str['KOMFORT'] = acc['id']
+            elif 'komfort' in name_lower and ('wspolne' in name_lower or 'wspólne' in name_lower):
+                self._account_id_to_str['KOMFORT_WSP'] = acc['id']
+            elif 'direct' in name_lower:
+                self._account_id_to_str['DIRECT'] = acc['id']
+            elif 'smart' in name_lower and 'saver' in name_lower:
+                self._account_id_to_str['SMART_SAVER'] = acc['id']
+            elif 'cash' in name_lower or 'gotówka' in name_lower or 'gotowka' in name_lower:
+                self._account_id_to_str['CASH'] = acc['id']
+
+    def _load_keywords_from_json(self) -> Dict:
+        """Load account keywords from JSON config file."""
+        json_path = Path(__file__).parent / "account_keywords.json"
+        if json_path.exists():
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                # Map string account IDs to actual integer IDs from accounts
+                keywords = {}
+                for keyword, acc_info in data.items():
+                    if isinstance(acc_info, dict) and 'account_id' in acc_info:
+                        acc_id_str = acc_info['account_id']
+                        # Resolve string ID to integer
+                        resolved_id = self._account_id_to_str.get(acc_id_str)
+                        if resolved_id is not None:
+                            keywords[keyword.lower()] = resolved_id
+                        else:
+                            logger.debug(f"Account ID {acc_id_str} for keyword '{keyword}' not present in user's accounts (normal if user doesn't have this bank)")
+
+                logger.info(f"Loaded {len(keywords)} account keywords from {json_path}")
+                return keywords
+            except Exception as e:
+                logger.error(f"Failed to load account keywords from JSON: {e}")
+        else:
+            logger.warning(f"Account keywords JSON not found at {json_path}")
+
+        # Fallback: build from accounts
+        return self._build_keywords_fallback()
+
+    def _build_keywords_fallback(self) -> Dict:
+        """Fallback: build keywords from accounts list."""
+        keywords = {}
+        asset_accounts = [acc for acc in self.accounts if acc.get('type') in ('asset', 'cash')]
+
+        for acc in asset_accounts:
+            acc_id = acc.get('id')
+            acc_name = acc.get('name', '')
+            if not acc_id or not acc_name:
+                continue
+
+            name_lower = acc_name.lower()
+
+            if 'ing' in name_lower and 'ing' not in keywords:
+                keywords['ing'] = acc_id
+            if ('milennium' in name_lower or 'millenium' in name_lower) and 'millennium' not in keywords:
+                keywords['millennium'] = acc_id
+            if 'pekao' in name_lower and 'pekao' not in keywords:
+                keywords['pekao'] = acc_id
+            if 'mali' in name_lower and 'mali' not in keywords:
+                keywords['mali'] = acc_id
+            if 'komfort' in name_lower and 'komfort' not in keywords:
+                keywords['komfort'] = acc_id
+            if 'direct' in name_lower and 'direct' not in keywords:
+                keywords['direct'] = acc_id
+            if 'smart' in name_lower and 'saver' in name_lower and 'smart saver' not in keywords:
+                keywords['smart saver'] = acc_id
+            if ('cash' in name_lower or 'gotówka' in name_lower or 'gotowka' in name_lower):
+                if 'cash' not in keywords:
+                    keywords['cash'] = acc_id
+                if 'gotówka' not in keywords:
+                    keywords['gotówka'] = acc_id
+            keywords[acc_name.lower()] = acc_id
+
+        # Card numbers
+        card_keywords = {
+            '4246': 'komfort',
+            'visa': 'visa',
+            'mastercard': 'mastercard',
+        }
+        for kw, val in card_keywords.items():
+            if kw not in keywords:
+                for acc in asset_accounts:
+                    if val in acc.get('name', '').lower():
+                        keywords[kw] = acc.get('id')
+                        break
+
+        # STS -> Direct
+        if 'sts' not in keywords:
+            for acc in asset_accounts:
+                if 'direct' in acc.get('name', '').lower():
+                    keywords['sts'] = acc.get('id')
+                    keywords['www.sts'] = acc.get('id')
+                    break
+
+        return keywords
+
+    def save_keyword(self, keyword: str, account_id_str: str):
+        """
+        Dodaje nowe słowo kluczowe do matchera I zapisuje do account_keywords.json.
+
+        Args:
+            keyword: Słowo kluczowe (np. 'nowe konto', '1234')
+            account_id_str: String ID konta (np. 'DIRECT', 'KOMFORT', 'SMART_SAVER')
+        """
+        keyword = keyword.lower().strip()
+
+        # Resolve account_id_str to numeric ID
+        resolved_id = self._account_id_to_str.get(account_id_str)
+        if not resolved_id:
+            raise ValueError(f"Nie znaleziono numerycznego ID dla account_id_str={account_id_str}")
+
+        # 1. Aktualizuj pamięć
+        self.account_keywords[keyword] = resolved_id
+
+        # 2. Załaduj obecny JSON, zaktualizuj, zapisz
+        json_path = Path(__file__).parent / "account_keywords.json"
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        data[keyword] = {
+            'account_id': account_id_str,
+            'name': self._get_account_name_by_id(resolved_id)
+        }
+
+        # Zapisz z zachowaniem porządku
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(dict(sorted(data.items())), f, ensure_ascii=False, indent=2)
+
+        logger.info(f"Zapisano nową regułę konta: '{keyword}' -> {account_id_str} (ID={resolved_id})")
+
+    def _get_account_name_by_id(self, acc_id: int) -> str:
+        """Zwraca nazwę konta po ID."""
+        for acc in self._accounts_lower:
+            if acc['id'] == acc_id:
+                return acc['name']
+        return "Nieznane"
 
     def _build_keywords(self):
         """Buduje mapowanie słów kluczowych na ID kont z listy kont."""
