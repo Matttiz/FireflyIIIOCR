@@ -129,21 +129,35 @@ class BlockTransactionParser:
                 ])
                 # Bank category lines (Rozrywka, Spożywcze, Wydatki podstawowe, etc.)
                 # are metadata for the PREVIOUS transaction - should be appended to current block
-                # NOT combined with pending_date_line (which would create a fake transaction)
+                # HOWEVER: if we have a pending_date_line (date + opis without amount) AND
+                # the pending_date_line looks like an incomplete transaction (has "Wydatek"/"Wpływ"/"Nie analizuj" as transaction type),
+                # this bank category line likely contains the amount for THAT transaction!
                 if is_bank_category:
                     # To kategoria bankowa / saldo - dodaj do opisu aktualnego bloku
                     if current_block:
                         current_block.append(line)
                     else:
                         # Nie ma current_block - to metadata do PRZYSZŁEJ transakcji
-                        # WAŻNE: Jeśli mamy pending_date_line, dodaj GO TEŻ do pre_header_lines,
-                        # bo to jest pre-header dla PRZYSZŁEJ transakcji (zawiera konto itp.)
-                        # Ale nie twórz z niego nowej transakcji (pending_date_line nie ma kwoty)
-                        if pending_date_line:
-                            pre_header_lines.append(pending_date_line)
+                        # JEŚLI mamy pending_date_line I pending_date_line wygląda na niekompletną transakcję
+                        # (zawiera "Wydatek"/"Wpływ"/"Nie analizuj" jako typ transakcji, nie jako część opisu handlowca)
+                        if pending_date_line and self._looks_like_incomplete_transaction(pending_date_line):
+                            # Połącz pending_date_line (data + opis + "Wydatek"/"Wpływ") z bank_category_line (kwota + kategoria + saldo)
+                            combined_line = pending_date_line + " " + line
                             pending_date_line = ""
-                        pre_header_lines.append(line)
-                    continue
+                            line = combined_line
+                            has_day_date = True
+                            has_amount = True
+                            is_new_transaction = True
+                            # Przejdź do obsługi nowej transakcji poniżej
+                        else:
+                            # Brak pending_date_line LUB pending_date_line nie wygląda na transakcję
+                            # (np. to tylko nagłówek "Wczoraj 04.11 SPAR... KONTO Direct" bez "Wydatek")
+                            if pending_date_line:
+                                pre_header_lines.append(pending_date_line)
+                                pending_date_line = ""
+                            pre_header_lines.append(line)
+                            continue
+                    # Jeśli current_block istniał lub połączyliśmy z pending_date_line, kontynuuj normalnie
 
                 # Also check if this looks like a SALDO line (has TWO amounts: transaction + balance)
                 # e.g., "Wydatki podstawowe -8,09 PLN 264,92 PLN" - two PLN in one line
@@ -153,12 +167,23 @@ class BlockTransactionParser:
                     if current_block:
                         current_block.append(line)
                     else:
-                        # Jeśli mamy pending_date_line, dodaj GO TEŻ do pre_header_lines
-                        if pending_date_line:
-                            pre_header_lines.append(pending_date_line)
+                        # Jeśli mamy pending_date_line I pending_date_line wygląda na niekompletną transakcję
+                        # (zawiera "Wydatek"/"Wpływ"/"Nie analizuj" jako typ transakcji, nie jako część opisu handlowca)
+                        if pending_date_line and self._looks_like_incomplete_transaction(pending_date_line):
+                            combined_line = pending_date_line + " " + line
                             pending_date_line = ""
-                        pre_header_lines.append(line)
-                    continue
+                            line = combined_line
+                            has_day_date = True
+                            has_amount = True
+                            is_new_transaction = True
+                            # Przejdź do obsługi nowej transakcji poniżej
+                        else:
+                            # Brak pending_date_line LUB pending_date_line nie wygląda na transakcję
+                            if pending_date_line:
+                                pre_header_lines.append(pending_date_line)
+                                pending_date_line = ""
+                            pre_header_lines.append(line)
+                            continue
 
                 # Jeśli mamy pending date line I to NIE kategoria bankowa, POŁĄCZ
                 if pending_date_line:
@@ -242,6 +267,29 @@ class BlockTransactionParser:
             blocks.append(current_block)
 
         return blocks
+
+    def _looks_like_incomplete_transaction(self, line: str) -> bool:
+        """
+        Sprawdza czy linia wygląda na niekompletną transakcję (ma datę i typ transakcji, ale brak kwoty).
+        Szuka wzorców typu: "Wczoraj 04.11 SPAR Wydatek... KONTO Direct" (ma "Wydatek" jako typ transakcji)
+        LUB: "Wczoraj 04.11 SPAR Wpływ... KONTO Direct" (ma "Wpływ" jako typ transakcji)
+        To odróżnia transakcje od nagłówków sekcji.
+
+        UWAGA: "Płatność" NIE jest typem transakcji - to słowo w opisie handlowca (np. "SPAR Płatność").
+        Typy transakcji to tylko: "Wydatek" (withdrawal), "Wpływ" (deposit), "Nie analizuj" (not analyzed).
+        """
+        # Musi mieć datę
+        has_date = bool(self.start_transaction_pattern.search(line) or re.search(r'\d{2}[./-]\d{2}[./-]\d{2,4}', line))
+        if not has_date:
+            return False
+
+        # Musi zawierać słowo kluczowe typu transakcji (jako osobne słowo, nie część nazwy handlowca)
+        # Tylko: "Wydatek" (withdrawal), "Wpływ" (deposit), "Nie analizuj" (not analyzed)
+        # "Płatność" NIE jest typem transakcji - to część opisu handlowca
+        transaction_type_pattern = r'\b(Wydatek|Wpływ|Nie\s+analizuj)\b'
+        has_transaction_type = bool(re.search(transaction_type_pattern, line, re.IGNORECASE))
+
+        return has_date and has_transaction_type
 
     def _is_transaction_start(self, line: str) -> bool:
         """Sprawdza czy linia to początek nowej transakcji (zawiera dzień + datę + kwotę)"""
