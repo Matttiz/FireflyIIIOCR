@@ -17,6 +17,9 @@ class Transaction:
     exists: bool = False
     status: str = ""
     datetime_str: str = ""
+    # Duplicate detection
+    duplicate_of: Optional[int] = None  # ID of existing transaction in Firefly III
+    duplicate_info: str = ""  # Human-readable info about the duplicate
 
     def is_valid(self) -> bool:
         return bool(

@@ -251,7 +251,11 @@ class TransactionTableView(QWidget):
             self.table.setItem(i, 2, QTableWidgetItem(date_str))
 
             # Opis
-            self.table.setItem(i, 3, QTableWidgetItem(trans.description))
+            desc_item = QTableWidgetItem(trans.description)
+            # Add duplicate info as tooltip if exists
+            if trans.duplicate_of:
+                desc_item.setToolTip(f"⚠️ DUPLIKAT: {trans.duplicate_info}")
+            self.table.setItem(i, 3, desc_item)
 
             # Kwota
             self.table.setItem(i, 4, QTableWidgetItem(f"{trans.amount:.2f}"))
@@ -341,6 +345,10 @@ class TransactionTableView(QWidget):
             if trans.exists:
                 bg_color = QColor(211, 211, 211)  # lightGray
 
+            # Kolor dla wykrytych duplikatów (pomarańczowy) - nadpisuje typ, ale nie "już istnieje"
+            if trans.duplicate_of and not trans.exists:
+                bg_color = QColor(255, 200, 100)  # light orange - warning color
+
             if bg_color:
                 for col in range(8):
                     item = self.table.item(i, col)
@@ -382,71 +390,81 @@ class MainWindow(QMainWindow):
         table_height = self.table_view.height()
         logger.info(f"  TableView: {table_width}x{table_height} (aspect: {table_width/table_height:.2f})")
 
-    def _update_latest_firefly_label(self, trans: Optional[Dict]):
-        """Aktualizuje label z informacją o najnowszej transakcji Firefly"""
-        if not trans:
-            self.latest_firefly_label.setText("Najnowsza transakcja Firefly: brak")
+    def _update_latest_firefly_label(self, trans: Optional[Dict] = None):
+        """Aktualizuje label z informacją o najnowszych transakcjach Firefly (do 3)"""
+        # Pobierz do 3 najnowszych transakcji z API
+        latest_transactions = self.api_client.get_latest_transactions(count=3)
+
+        if not latest_transactions:
+            self.latest_firefly_label.setText("Najnowsze transakcje Firefly: brak")
             return
 
-        # Pobierz datę i czas
-        date_str = ""
-        trans_date_str = trans.get('date', '')
-        if trans_date_str:
-            try:
-                dt = datetime.fromisoformat(trans_date_str.replace('Z', '+00:00'))
-                date_str = dt.strftime('%Y-%m-%d %H:%M')
-            except:
-                date_str = trans_date_str[:16].replace('T', ' ')
-
-        # Pobierz opis
-        description = trans.get('description', 'Brak opisu')
-        if len(description) > 50:
-            description = description[:47] + "..."
-
-        # Pobierz kategorię
-        category_name = "Brak"
-        category_id = trans.get('category_id')
-        if category_id and self.categories:
-            cat_id_str = str(category_id)
-            for cat in self.categories:
-                cat_id = cat.get('id') if isinstance(cat, dict) else cat.id
-                if cat_id is not None and str(cat_id) == cat_id_str:
-                    category_name = cat.get('name', 'Nieznana') if isinstance(cat, dict) else cat.name
-                    break
-
-        # Pobierz konto źródłowe
-        source_name = "Nieznane"
-        source_id = trans.get('source_id')
-        if source_id and self.accounts:
-            source_id_str = str(source_id)
-            for acc in self.accounts:
-                acc_id = acc.get('id') if isinstance(acc, dict) else acc.id
-                if acc_id is not None and str(acc_id) == source_id_str:
-                    source_name = acc.get('name', 'Nieznane') if isinstance(acc, dict) else acc.name
-                    break
-
-        # Pobierz typ
-        trans_type = trans.get('type', '')
         type_map = {
             'withdrawal': 'Wypłata',
             'deposit': 'Wpłata',
             'transfer': 'Transfer'
         }
-        type_name = type_map.get(trans_type, trans_type)
 
-        # Kwota
-        amount = trans.get('amount', 0)
+        lines = []
+        for i, t in enumerate(latest_transactions):
+            # Pobierz datę i czas
+            date_str = ""
+            trans_date_str = t.get('date', '')
+            if trans_date_str:
+                try:
+                    dt = datetime.fromisoformat(trans_date_str.replace('Z', '+00:00'))
+                    date_str = dt.strftime('%Y-%m-%d %H:%M')
+                except:
+                    date_str = trans_date_str[:16].replace('T', ' ')
 
-        # Zbuduj tekst
-        parts = []
-        if date_str:
-            parts.append(f"📅 {date_str}")
-        parts.append(f"💰 {amount:.2f} PLN ({type_name})")
-        parts.append(f"📝 {description}")
-        parts.append(f"🏷️ {category_name}")
-        parts.append(f"🏦 {source_name}")
+            # Pobierz opis
+            description = t.get('description', 'Brak opisu')
+            if len(description) > 40:
+                description = description[:37] + "..."
 
-        self.latest_firefly_label.setText("  |  ".join(parts))
+            # Pobierz kategorię
+            category_name = "Brak"
+            category_id = t.get('category_id')
+            if category_id and self.categories:
+                cat_id_str = str(category_id)
+                for cat in self.categories:
+                    cat_id = cat.get('id') if isinstance(cat, dict) else cat.id
+                    if cat_id is not None and str(cat_id) == cat_id_str:
+                        category_name = cat.get('name', 'Nieznana') if isinstance(cat, dict) else cat.name
+                        break
+
+            # Pobierz konto źródłowe
+            source_name = "Nieznane"
+            source_id = t.get('source_id')
+            if source_id and self.accounts:
+                source_id_str = str(source_id)
+                for acc in self.accounts:
+                    acc_id = acc.get('id') if isinstance(acc, dict) else acc.id
+                    if acc_id is not None and str(acc_id) == source_id_str:
+                        source_name = acc.get('name', 'Nieznane') if isinstance(acc, dict) else acc.name
+                        break
+
+            # Pobierz typ
+            trans_type = t.get('type', '')
+            type_name = type_map.get(trans_type, trans_type)
+
+            # Kwota
+            amount = t.get('amount', 0)
+
+            # Zbuduj linię
+            parts = []
+            if date_str:
+                parts.append(f"📅 {date_str}")
+            parts.append(f"💰 {amount:.2f} PLN ({type_name})")
+            parts.append(f"📝 {description}")
+            parts.append(f"🏷️ {category_name}")
+            parts.append(f"🏦 {source_name}")
+
+            lines.append("  |  ".join(parts))
+
+        # Header z liczbą transakcji
+        header = f"🕐 Ostatnie {len(latest_transactions)} transakcje Firefly:"
+        self.latest_firefly_label.setText(header + "\n" + "\n".join(lines))
 
     def _on_text_edit_resize(self, event):
         """Called when TextEdit resizes - logs dimensions"""
@@ -509,7 +527,7 @@ class MainWindow(QMainWindow):
         self._setup_ui()
         self._connect_signals()
 
-        # Pobierz i zaloguj najnowszą transakcję z Firefly przy starcie (po _setup_ui, żeby label istniał)
+        # Pobierz i zaloguj najnowsze transakcje z Firefly przy starcie (po _setup_ui, żeby label istniał)
         latest_global = api_client.get_global_latest_transaction_time(data_manager.data_dir)
         if latest_global:
             logger.info(f"Startup: Latest global transaction from Firefly: {latest_global.isoformat()}")
@@ -518,7 +536,7 @@ class MainWindow(QMainWindow):
             self._update_latest_firefly_label(latest_trans)
         else:
             logger.info("Startup: No existing transactions in Firefly cache")
-            self.latest_firefly_label.setText("Najnowsza transakcja Firefly: brak")
+            self._update_latest_firefly_label()
 
         # Log main window initial layout
         self._log_initial_layout()
@@ -700,8 +718,7 @@ class MainWindow(QMainWindow):
         if count > 0:
             logger.info(f"Analiza: Odświeżono {count} transakcji z Firefly API")
             # Update latest transaction info in UI
-            latest_trans = self.api_client.get_global_latest_transaction(self.data_manager.data_dir)
-            self._update_latest_firefly_label(latest_trans)
+            self._update_latest_firefly_label()
 
         # Parse
         parsed = self.transaction_parser.parse_blocks(lines)
@@ -718,13 +735,21 @@ class MainWindow(QMainWindow):
         for trans in parsed:
             trans_dict = trans.to_dict()
 
-            # Check if exists
+            # Check if exists (exact duplicate)
             if self.matcher.check_exists(trans_dict):
                 trans.exists = True
                 trans.status = "Już istnieje"
+
+                # Find the duplicate to get its ID and info
+                duplicate = self.matcher.find_duplicate(trans_dict)
+                if duplicate:
+                    trans.duplicate_of = duplicate.get('id')
+                    existing_date = duplicate.get('date', 'brak daty')
+                    existing_desc = duplicate.get('description', 'brak opisu')[:50]
+                    trans.duplicate_info = f"Duplikat ID:{duplicate.get('id')} z {existing_date}: {existing_desc}..."
             else:
                 trans.status = "Nowa"
-                # History match
+                # History match for auto-complete
                 match = self.matcher.find_best_match(trans.description)
                 if match:
                     if not trans.category_id and match.get('category_id'):

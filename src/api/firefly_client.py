@@ -229,6 +229,22 @@ class FireflyApiClient:
                     pass
         return latest_trans
 
+    def get_latest_transactions(self, count: int = 3) -> List[Dict]:
+        """
+        Pobiera N najnowszych transakcji z cache (globalnie, niezależnie od konta).
+
+        Args:
+            count: Liczba transakcji do pobrania (domyślnie 3)
+
+        Returns:
+            Lista słowników transakcji posortowana od najnowszej
+        """
+        if not self._transactions_cache:
+            return []
+
+        # Cache is already sorted by date descending (newest first) from refresh_transactions_from_api
+        return self._transactions_cache[:count]
+
     def get_next_transaction_time(self, account_id: int, target_date: Optional[date] = None, data_dir: Optional[Path] = None) -> datetime:
         """
         Oblicza czas dla nowej transakcji.

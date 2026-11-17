@@ -49,6 +49,46 @@ class TransactionMatcher:
                 continue
         return False
 
+    def find_duplicate(self, transaction: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Znajduje duplikat transakcji w historii i zwraca pełny obiekt istniejącej transakcji.
+
+        Returns:
+            Dict z danymi istniejącej transakcji (w tym 'id') lub None jeśli nie znaleziono.
+        """
+        from datetime import datetime, date
+
+        trans_desc = transaction['description'].lower().strip()
+        trans_date = transaction['date'] if isinstance(transaction['date'], date) else transaction['date']
+
+        for existing in self.existing_transactions:
+            if not existing.get('date'):
+                continue
+            try:
+                existing_date = datetime.fromisoformat(
+                    existing['date'].replace('Z', '+00:00')
+                ).date()
+                existing_desc = existing['description'].lower().strip()
+
+                date_diff = abs((existing_date - trans_date).days)
+                amount_diff = abs(existing['amount'] - transaction['amount'])
+
+                # Stricter description matching (same logic as check_exists)
+                desc_exact = trans_desc == existing_desc
+                shorter = trans_desc if len(trans_desc) < len(existing_desc) else existing_desc
+                longer = existing_desc if len(trans_desc) < len(existing_desc) else trans_desc
+                desc_contains = (
+                    shorter in longer
+                    and len(shorter) >= 8
+                    and len(shorter) / len(longer) >= 0.5
+                )
+
+                if date_diff <= 1 and amount_diff < 0.01 and (desc_exact or desc_contains):
+                    return existing
+            except Exception:
+                continue
+        return None
+
     def find_best_match(self, description: str) -> Optional[Dict[str, Any]]:
         """Znajduje najlepsze dopasowanie w historii na podstawie opisu"""
         if not description:
